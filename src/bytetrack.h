@@ -23,6 +23,7 @@ struct STrack {
     KalmanXYAH kf;
     float score = 0.f;
     int start_frame = 0, frame_id = 0, tracklet_len = 0;
+    int hits = 0;                // v2: 累计匹配到检测的帧数（用于确认/显示）
     int det_idx = -1;            // 本帧匹配到的检测下标（-1 表示本帧未匹配）
     cv::Rect2f rect() const { return kf.rect(); }
     int end_frame() const { return frame_id; }
@@ -36,6 +37,8 @@ struct ByteTrackConfig {
     float second_match_thresh = 0.5f;
     float unconfirmed_match_thresh = 0.7f;
     int max_lost = 30;           // 丢失多少帧后删除（≈ fps * 秒）
+    float buffer = 0.f;          // v2: Buffered-IoU 外扩比例（C-BIoU），车载相机运动快/近处目标位移大时用 0.3~0.5
+    bool fuse_score = true;      // 第一阶段代价是否乘检测分（ByteTrack 原版 true；低分目标易断，可关）
 };
 
 class ByteTracker {

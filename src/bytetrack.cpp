@@ -93,13 +93,19 @@ void linear_assignment(const std::vector<std::vector<float>>& cost, int na, int 
     for (int j = 0; j < nb; ++j) if (a_of_b[j] < 0) un_b.push_back(j);
 }
 
+static cv::Rect2f buffered(const cv::Rect2f& r, float b) {
+    if (b <= 0.f) return r;
+    return cv::Rect2f(r.x - r.width * b, r.y - r.height * b, r.width * (1 + 2 * b), r.height * (1 + 2 * b));
+}
+
 static std::vector<std::vector<float>> iou_cost(const std::vector<STrack*>& ts, const std::vector<int>& di,
-                                                const std::vector<cv::Rect2f>& boxes, const std::vector<float>* scores) {
+                                                const std::vector<cv::Rect2f>& boxes, const std::vector<float>* scores,
+                                                float buffer = 0.f) {
     std::vector<std::vector<float>> c(ts.size(), std::vector<float>(di.size(), 1.f));
     for (size_t i = 0; i < ts.size(); ++i) {
-        cv::Rect2f tr = ts[i]->rect();
+        cv::Rect2f tr = buffered(ts[i]->rect(), buffer);
         for (size_t j = 0; j < di.size(); ++j) {
-            float o = iou(tr, boxes[di[j]]);
+            float o = iou(tr, buffered(boxes[di[j]], buffer));
             if (scores) o *= (*scores)[di[j]];   // ByteTrack fuse_score
             c[i][j] = 1.f - o;
         }
@@ -129,6 +135,7 @@ std::vector<STrack*> ByteTracker::update(const std::vector<cv::Rect2f>& boxes, c
         t->kf.update(boxes[di]);
         t->score = scores[di];
         t->det_idx = di;
+        t->hits++;
         t->frame_id = frame_id_;
         t->tracklet_len = (t->state == TS_TRACKED) ? t->tracklet_len + 1 : 0;
         t->state = TS_TRACKED;
@@ -137,7 +144,7 @@ std::vector<STrack*> ByteTracker::update(const std::vector<cv::Rect2f>& boxes, c
 
     // 第一阶段: 高分检测 vs (tracked+lost)
     std::vector<std::pair<int, int>> m; std::vector<int> ua, ub;
-    linear_assignment(iou_cost(pool, high, boxes, &scores), (int)pool.size(), (int)high.size(), cfg_.match_thresh, m, ua, ub);
+    linear_assignment(iou_cost(pool, high, boxes, cfg_.fuse_score ? &scores : nullptr, cfg_.buffer), (int)pool.size(), (int)high.size(), cfg_.match_thresh, m, ua, ub);
     for (auto& p : m) apply(pool[p.first], high[p.second]);
     std::vector<int> high_left; for (int j : ub) high_left.push_back(high[j]);
 
@@ -146,12 +153,12 @@ std::vector<STrack*> ByteTracker::update(const std::vector<cv::Rect2f>& boxes, c
     for (int i : ua) if (pool[i]->state == TS_TRACKED) remain.push_back(pool[i]);
     std::vector<STrack*> lost_candidates;
     for (int i : ua) if (pool[i]->state != TS_TRACKED) lost_candidates.push_back(pool[i]);
-    linear_assignment(iou_cost(remain, low, boxes, nullptr), (int)remain.size(), (int)low.size(), cfg_.second_match_thresh, m, ua, ub);
+    linear_assignment(iou_cost(remain, low, boxes, nullptr, cfg_.buffer), (int)remain.size(), (int)low.size(), cfg_.second_match_thresh, m, ua, ub);
     for (auto& p : m) apply(remain[p.first], low[p.second]);
     for (int i : ua) remain[i]->state = TS_LOST;   // 标记丢失
 
     // 未确认轨迹 vs 剩余高分检测
-    linear_assignment(iou_cost(unconfirmed, high_left, boxes, &scores), (int)unconfirmed.size(), (int)high_left.size(), cfg_.unconfirmed_match_thresh, m, ua, ub);
+    linear_assignment(iou_cost(unconfirmed, high_left, boxes, cfg_.fuse_score ? &scores : nullptr, cfg_.buffer), (int)unconfirmed.size(), (int)high_left.size(), cfg_.unconfirmed_match_thresh, m, ua, ub);
     for (auto& p : m) apply(unconfirmed[p.first], high_left[p.second]);
     for (int i : ua) unconfirmed[i]->state = TS_REMOVED;
     std::vector<int> new_dets; for (int j : ub) new_dets.push_back(high_left[j]);
@@ -182,6 +189,7 @@ std::vector<STrack*> ByteTracker::update(const std::vector<cv::Rect2f>& boxes, c
         t.state = TS_TRACKED;
         t.activated = (frame_id_ == 1);
         t.det_idx = di;
+        t.hits = 1;
         nt.push_back(t);
     }
     // 去重：tracked 与 lost IoU 过高时，保留时间更长的（ByteTrack remove_duplicate_stracks）

@@ -18,9 +18,12 @@ if [ $FOUND -eq 0 ] && [ -d lib_sdk_fallback ]; then
   export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$PWD/lib_sdk_fallback
 fi
 mkdir -p "$SNAP"
+# v2: 有 demo.cfg 就加载（阈值/过滤/OSD 等参数）；CFG=none 不加载；EXTRA_ARGS 可覆盖；EXTRA_ARGS=--legacy 恢复 v1 行为对比
+CFG=${CFG:-demo.cfg}
+CFG_ARG=""; [ "$CFG" != "none" ] && [ -f "$CFG" ] && CFG_ARG="--config $CFG"
 ./plate_face_demo -i "$IN" -o "$OUT" \
   --face  models/face_det_${NPU}.axmodel \
   --plate models/plate_det_${NPU}.axmodel \
   --rec   models/plate_rec_${NPU}.axmodel \
   --color models/plate_cls_${NPU}.axmodel \
-  --snap_dir "$SNAP" $EXTRA_ARGS
+  --snap_dir "$SNAP" --result_json "${OUT%.*}_plates.json" $CFG_ARG $EXTRA_ARGS

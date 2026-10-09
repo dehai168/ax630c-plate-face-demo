@@ -16,7 +16,7 @@ find_package(OpenCV REQUIRED COMPONENTS core imgproc imgcodecs videoio)
 message(STATUS "OpenCV ${OpenCV_VERSION}: ${OpenCV_DIR}")
 
 set(SRCS
-  src/main.cpp src/detector.cpp src/plate_rec.cpp src/bytetrack.cpp src/text_render.cpp)
+  src/main.cpp src/detector.cpp src/plate_rec.cpp src/bytetrack.cpp src/text_render.cpp src/filters.cpp)
 
 if(BACKEND STREQUAL "AX")
   if(NOT BSP_MSP_DIR)

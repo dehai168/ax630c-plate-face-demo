@@ -1,4 +1,5 @@
-// plate_face_demo: 车牌 + 人脸 全流程离线测试 demo（AX630C / x86 ONNX Runtime 共用）
+// plate_face_demo v2: 车牌 + 人脸 全流程离线测试 demo（AX630C / x86 ONNX Runtime 共用）
+// v2: OSD 自学习屏蔽、车牌几何/格式/时序过滤、人脸五点几何过滤、BIoU 跟踪、同牌轨迹合并、配置文件
 // 读视频 -> 人脸检测(5点) + 车牌检测(4角点+单/双层) -> ByteTrack(各自独立) -> 车牌拉正/识别/颜色
 // -> 每个 track 维护 best-shot + 多帧投票 -> 叠加输出视频；可选保存 best-shot 大图/小图 + JSON
 #include <algorithm>
@@ -7,6 +8,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <fstream>
+#include <functional>
 #include <map>
 #include <sstream>
 #include <string>
@@ -18,6 +20,7 @@
 #include <opencv2/videoio.hpp>
 #include "bytetrack.h"
 #include "detector.h"
+#include "filters.h"
 #include "plate_rec.h"
 #include "text_render.h"
 #include "timer.h"
@@ -28,47 +31,142 @@ static const std::vector<float> kAnchors = {4, 5, 8, 10, 13, 16, 23, 29, 43, 55,
 
 // ------------------------------------------------------------------ args
 struct Args {
-    std::string in, out, face, plate, rec, color, snap_dir;
-    float face_thr = 0.5f, plate_thr = 0.5f, nms = 0.45f;
-    int max_frames = -1, track_lost = -1, rec_max = 20, min_hits = 3;
+    std::string in, out, face, plate, rec, color, snap_dir, dump, osd_mask, result_json;
+    // 检测/跟踪阈值（v2 默认值；--legacy 恢复 v1 行为）
+    float face_thr = 0.45f, face_new_thr = 0.5f, plate_thr = 0.35f, plate_new_thr = 0.45f, nms = 0.45f;
+    float plate_buffer = 0.4f, face_buffer = 0.3f;
+    bool fuse_score = false;
+    int max_frames = -1, start_frame = 0, track_lost = -1, rec_max = 20, min_hits = 3;
+    int plate_display_hits = 2, face_display_hits = 3;
+    float plate_show_score = 0.5f;   // 低分轨迹（未达该检测分）须识别出合法车牌后才显示框
     bool double_merge = true, quiet = false;
     float expand_x = 0.02f, expand_y = 0.04f;
+    // 车牌过滤
+    bool plate_geom = true, strict_format = true;
+    float rec_min_conf = 0.7f, min_vote = 1.0f, valid_ratio = 0.3f;
+    int max_serial_letters = 3;
+    float merge_gap_s = 4.f;
+    // OSD
+    bool osd = true, draw_osd = true;
+    int osd_episode_gap = 20, osd_min_hits = 25, osd_min_changes = 2;
+    float osd_bg_diff = 10.f;
+    // 人脸过滤
+    bool face_geom = true;
+    int face_min_size = 20;
+    float face_skin = 0.08f;
+    float face_eye_min = 0.06f;     // 两眼距/框宽下限（极端侧脸/俯视两眼重叠时拒绝）        // 肤色比例下限（0 关闭）
+    float face_out_score = 0.6f;   // 输出抓拍要求 track 最高分
+    bool legacy = false;
 };
 
 static void usage(const char* p) {
     printf("用法: %s -i in.mp4 -o out.mp4 --face face.axmodel --plate plate_det.axmodel --rec plate_rec.axmodel\n"
-           "          [--color plate_cls.axmodel] [--snap_dir snaps/]\n"
-           "  可选: --face_thr 0.5 --plate_thr 0.5 --nms 0.45 --max_frames N --track_lost <帧,默认=fps>\n"
-           "        --rec_max 20(每个车牌 track 最多识别次数) --min_hits 3 --double_mode merge|separate\n"
-           "        --expand_x 0.02 --expand_y 0.04 (车牌四角点外扩比例) --quiet\n"
-           "  不传 --face 或 --plate 则跳过对应分支；x86 版传 .onnx，板端版传 .axmodel\n"
-           "  输出扩展名 .avi -> MJPG 编码，其他 -> mp4v(MPEG-4 Part2)\n", p);
+           "          [--color plate_cls.axmodel] [--snap_dir snaps/] [--config demo.cfg]\n"
+           "  通用: --max_frames N --start_frame N --track_lost <帧,默认=fps> --min_hits 3 --quiet --dump dets.txt --result_json r.json\n"
+           "  车牌检测/跟踪: --plate_thr 0.35(跟踪高分阈值) --plate_new_thr 0.45(新建轨迹) --plate_buffer 0.4(BIoU 外扩) --nms 0.45\n"
+           "        --plate_display_hits 2 --plate_show_score 0.5 --rec_max 20 --double_mode merge|separate --expand_x 0.02 --expand_y 0.04\n"
+           "  车牌过滤: --plate_geom 1(四角点几何) --strict_format 1 --max_serial_letters 3 --rec_min_conf 0.7\n"
+           "        --min_vote 1.0 --valid_ratio 0.3(合法识别占比，低于则判非车牌) --merge_gap 4(秒, 同牌轨迹合并)\n"
+           "  OSD: --osd 1(自学习屏蔽) --osd_episode_gap 20 --osd_min_hits 25 --osd_min_changes 2 --osd_bg_diff 10 --draw_osd 1\n"
+           "        --osd_mask \"x,y,w,h;...\"(用户屏蔽区, <=1 为相对坐标, 例 0.8,0,0.2,0.08)\n"
+           "  人脸: --face_thr 0.45 --face_new_thr 0.5 --face_buffer 0.3 --face_eye_min 0.06 --face_geom 1 --face_min_size 20\n"
+           "        --face_display_hits 3 --face_out_score 0.6 --face_skin 0.08(框中部肤色比例下限, 0 关闭)\n"
+           "  --legacy: 恢复 v1 行为（阈值 0.5/0.55、无过滤、无 OSD、原版 ByteTrack）用于对比\n"
+           "  配置文件: 每行 \"key value\"（与命令行同名去掉 --），# 注释；命令行参数优先级更高（写在 --config 之后即可覆盖）\n"
+           "  不传 --face 或 --plate 则跳过对应分支；x86 版传 .onnx，板端版传 .axmodel\n",
+           p);
+}
+
+static bool parse_kv(const std::string& k0, const std::function<std::string()>& next, Args& a) {
+    std::string k = k0;
+    if (k == "-i" || k == "--input" || k == "input") { a.in = next(); return true; }
+    if (k == "-o" || k == "--output" || k == "output") { a.out = next(); return true; }
+    if (k.rfind("--", 0) == 0) k = k.substr(2);
+    auto F = [&](float& v) { v = std::stof(next()); };
+    auto I = [&](int& v) { v = std::stoi(next()); };
+    auto B = [&](bool& v) { std::string s = next(); v = !(s == "0" || s == "false" || s == "off"); };
+    if (k == "face") a.face = next();
+    else if (k == "plate") a.plate = next();
+    else if (k == "rec") a.rec = next();
+    else if (k == "color") a.color = next();
+    else if (k == "snap_dir") a.snap_dir = next();
+    else if (k == "dump") a.dump = next();
+    else if (k == "result_json") a.result_json = next();
+    else if (k == "osd_mask") a.osd_mask = next();
+    else if (k == "face_thr") F(a.face_thr);
+    else if (k == "face_new_thr") F(a.face_new_thr);
+    else if (k == "plate_thr") F(a.plate_thr);
+    else if (k == "plate_new_thr") F(a.plate_new_thr);
+    else if (k == "plate_buffer") F(a.plate_buffer);
+    else if (k == "face_buffer") F(a.face_buffer);
+    else if (k == "fuse_score") B(a.fuse_score);
+    else if (k == "nms") F(a.nms);
+    else if (k == "max_frames") I(a.max_frames);
+    else if (k == "start_frame") I(a.start_frame);
+    else if (k == "track_lost") I(a.track_lost);
+    else if (k == "rec_max") I(a.rec_max);
+    else if (k == "min_hits") I(a.min_hits);
+    else if (k == "plate_display_hits") I(a.plate_display_hits);
+    else if (k == "face_display_hits") I(a.face_display_hits);
+    else if (k == "plate_show_score") F(a.plate_show_score);
+    else if (k == "double_mode") a.double_merge = next() != "separate";
+    else if (k == "expand_x") F(a.expand_x);
+    else if (k == "expand_y") F(a.expand_y);
+    else if (k == "plate_geom") B(a.plate_geom);
+    else if (k == "strict_format") B(a.strict_format);
+    else if (k == "max_serial_letters") I(a.max_serial_letters);
+    else if (k == "rec_min_conf") F(a.rec_min_conf);
+    else if (k == "min_vote") F(a.min_vote);
+    else if (k == "valid_ratio") F(a.valid_ratio);
+    else if (k == "merge_gap") F(a.merge_gap_s);
+    else if (k == "osd") B(a.osd);
+    else if (k == "draw_osd") B(a.draw_osd);
+    else if (k == "osd_episode_gap") I(a.osd_episode_gap);
+    else if (k == "osd_min_changes") I(a.osd_min_changes);
+    else if (k == "osd_min_hits") I(a.osd_min_hits);
+    else if (k == "osd_bg_diff") F(a.osd_bg_diff);
+    else if (k == "face_geom") B(a.face_geom);
+    else if (k == "face_min_size") I(a.face_min_size);
+    else if (k == "face_skin") F(a.face_skin);
+    else if (k == "face_eye_min") F(a.face_eye_min);
+    else if (k == "face_out_score") F(a.face_out_score);
+    else if (k == "quiet") a.quiet = true;
+    else if (k == "legacy") {
+        a.legacy = true;
+        a.face_thr = 0.5f; a.face_new_thr = 0.55f; a.plate_thr = 0.5f; a.plate_new_thr = 0.55f;
+        a.plate_buffer = 0.f; a.face_buffer = 0.f; a.fuse_score = true; a.plate_display_hits = 1; a.face_display_hits = 1; a.plate_show_score = 0.f;
+        a.plate_geom = false; a.strict_format = false; a.rec_min_conf = 0.5f; a.min_vote = 0.f; a.valid_ratio = 0.f;
+        a.merge_gap_s = 0.f; a.osd = false; a.face_geom = false; a.face_skin = 0.f; a.face_min_size = 0; a.face_out_score = 0.f;
+    }
+    else return false;
+    return true;
+}
+
+static bool load_config(const std::string& path, Args& a) {
+    std::ifstream f(path);
+    if (!f) { fprintf(stderr, "无法打开配置文件 %s\n", path.c_str()); return false; }
+    std::string line;
+    while (std::getline(f, line)) {
+        auto h = line.find('#'); if (h != std::string::npos) line = line.substr(0, h);
+        std::stringstream ss(line); std::string k, v;
+        if (!(ss >> k)) continue;
+        std::getline(ss, v);
+        v.erase(0, v.find_first_not_of(" \t")); v.erase(v.find_last_not_of(" \t\r") + 1);
+        if (v.size() >= 2 && v.front() == '"' && v.back() == '"') v = v.substr(1, v.size() - 2);
+        bool used = false;
+        if (!parse_kv(k, [&]() { used = true; return v; }, a)) { fprintf(stderr, "配置项未知: %s\n", k.c_str()); return false; }
+        (void)used;
+    }
+    return true;
 }
 
 static bool parse(int argc, char** argv, Args& a) {
     for (int i = 1; i < argc; ++i) {
         std::string k = argv[i];
         auto next = [&]() -> std::string { if (i + 1 >= argc) { fprintf(stderr, "missing value for %s\n", k.c_str()); exit(1); } return argv[++i]; };
-        if (k == "-i" || k == "--input") a.in = next();
-        else if (k == "-o" || k == "--output") a.out = next();
-        else if (k == "--face") a.face = next();
-        else if (k == "--plate") a.plate = next();
-        else if (k == "--rec") a.rec = next();
-        else if (k == "--color") a.color = next();
-        else if (k == "--snap_dir") a.snap_dir = next();
-        else if (k == "--face_thr") a.face_thr = std::stof(next());
-        else if (k == "--plate_thr") a.plate_thr = std::stof(next());
-        else if (k == "--nms") a.nms = std::stof(next());
-        else if (k == "--max_frames") a.max_frames = std::stoi(next());
-        else if (k == "--track_lost") a.track_lost = std::stoi(next());
-        else if (k == "--rec_max") a.rec_max = std::stoi(next());
-        else if (k == "--min_hits") a.min_hits = std::stoi(next());
-        else if (k == "--double_mode") a.double_merge = next() != "separate";
-        else if (k == "--expand_x") a.expand_x = std::stof(next());
-        else if (k == "--expand_y") a.expand_y = std::stof(next());
-        else if (k == "--quiet") a.quiet = true;
-        else if (k == "-h" || k == "--help") { usage(argv[0]); exit(0); }
-        else { fprintf(stderr, "unknown arg %s\n", k.c_str()); usage(argv[0]); return false; }
+        if (k == "-h" || k == "--help") { usage(argv[0]); exit(0); }
+        if (k == "--config") { if (!load_config(next(), a)) return false; continue; }
+        if (!parse_kv(k, next, a)) { fprintf(stderr, "unknown arg %s\n", k.c_str()); usage(argv[0]); return false; }
     }
     if (a.in.empty() || a.out.empty() || (a.face.empty() && a.plate.empty())) { usage(argv[0]); return false; }
     if (!a.plate.empty() && a.rec.empty()) { fprintf(stderr, "--plate 需要同时给 --rec\n"); return false; }
@@ -140,11 +238,16 @@ struct BestShot {
 
 struct FaceInfo {
     int id = 0, first = -1, last = -1, hits = 0;
+    float max_score = 0.f;
     BestShot best;
 };
 
 struct PlateInfo {
     int id = 0, first = -1, last = -1, hits = 0, rec_count = 0;
+    int rec_valid = 0;                       // v2: 识别结果为合法格式（且置信度达标）的次数
+    int disp_id = 0;                         // v2: 显示/输出用 ID（同牌短时断开的轨迹复用旧 ID）
+    int osd_hits = 0;                        // v2: 落在 OSD 屏蔽区的次数
+    float max_score = 0.f;
     BestShot best;
     std::map<std::string, float> votes;      // 车牌号 -> 累计权重
     float color_votes[PC_NUM] = {0};
@@ -170,6 +273,9 @@ struct PlateInfo {
         return c;
     }
     bool stable() const { float s; float b = text_weight(&s); return b >= 4.f && b >= 2.5f * s; }
+    float valid_ratio() const { return rec_count ? (float)rec_valid / rec_count : 0.f; }
+    // 识别多次仍几乎没有合法结果 -> 判为非车牌（广告牌/标语/OSD 等）
+    bool non_plate(float min_ratio) const { return min_ratio > 0 && rec_count >= 6 && valid_ratio() < min_ratio; }
 };
 
 static std::string json_escape(const std::string& s) {
@@ -197,7 +303,7 @@ static void save_face_snap(const std::string& dir, const FaceInfo& f, double fps
     js << "{\n  \"type\": \"face\",\n  \"track_id\": " << f.id << ",\n  \"first_frame\": " << f.first
        << ",\n  \"last_frame\": " << f.last << ",\n  \"hits\": " << f.hits << ",\n  \"best_frame\": " << f.best.frame
        << ",\n  \"best_time_s\": " << (fps > 0 ? f.best.frame / fps : 0) << ",\n  \"quality\": " << f.best.quality
-       << ",\n  \"score\": " << d.score << ",\n  \"box_xywh\": [" << d.box.x << ", " << d.box.y << ", " << d.box.width << ", "
+       << ",\n  \"score\": " << d.score << ",\n  \"max_score\": " << f.max_score << ",\n  \"box_xywh\": [" << d.box.x << ", " << d.box.y << ", " << d.box.width << ", "
        << d.box.height << "],\n  \"landmarks\": [";
     for (size_t i = 0; i < d.kps.size(); ++i) js << (i ? ", " : "") << "[" << d.kps[i].x << ", " << d.kps[i].y << "]";
     js << "]\n}\n";
@@ -213,7 +319,8 @@ static void save_plate_snap(const std::string& dir, const PlateInfo& p, double f
     std::ofstream js(std::string(base) + ".json");
     const auto& d = p.best.det;
     float second; float w = p.text_weight(&second);
-    js << "{\n  \"type\": \"plate\",\n  \"track_id\": " << p.id << ",\n  \"first_frame\": " << p.first
+    js << "{\n  \"type\": \"plate\",\n  \"track_id\": " << p.id << ",\n  \"disp_id\": " << p.disp_id
+       << ",\n  \"valid_ratio\": " << p.valid_ratio() << ",\n  \"first_frame\": " << p.first
        << ",\n  \"last_frame\": " << p.last << ",\n  \"hits\": " << p.hits << ",\n  \"best_frame\": " << p.best.frame
        << ",\n  \"best_time_s\": " << (fps > 0 ? p.best.frame / fps : 0) << ",\n  \"quality\": " << p.best.quality
        << ",\n  \"det_score\": " << d.score << ",\n  \"layer\": \"" << (p.layer_votes[1] > p.layer_votes[0] ? "double" : "single")
@@ -238,6 +345,37 @@ static cv::Scalar color_bgr(int c) {
         case PC_BLACK: return {30, 30, 30};
         default: return {128, 128, 128};
     }
+}
+
+// ------------------------------------------------------------------ v2: 同牌轨迹合并
+struct PlateResult {
+    int id = 0, disp_id = 0, first = 0, last = 0, best_frame = 0, color = PC_UNKNOWN;
+    std::string text;
+    float weight = 0.f;
+    std::map<std::string, float> votes;
+    std::vector<int> ids;
+};
+
+// 时间上相邻（gap 帧内）且车牌号编辑距离 <=1 的结果合并为同一辆车
+static std::vector<PlateResult> merge_plates(std::vector<PlateResult> in, int gap) {
+    std::sort(in.begin(), in.end(), [](const PlateResult& a, const PlateResult& b) { return a.first < b.first; });
+    std::vector<PlateResult> out;
+    for (auto& r : in) {
+        PlateResult* g = nullptr;
+        if (gap > 0)
+            for (auto it = out.rbegin(); it != out.rend(); ++it) {
+                if (r.first - it->last > gap) continue;
+                if (utf8_edit_distance(it->text, r.text) <= 1) { g = &*it; break; }
+            }
+        if (!g) { out.push_back(r); out.back().ids = {r.id}; continue; }
+        for (auto& kv : r.votes) g->votes[kv.first] += kv.second;
+        g->weight += r.weight;
+        g->first = std::min(g->first, r.first); g->last = std::max(g->last, r.last);
+        g->ids.push_back(r.id);
+        float b = 0; for (auto& kv : g->votes) if (kv.second > b) { b = kv.second; g->text = kv.first; }
+        if (r.weight > 0 && g->color == PC_UNKNOWN) g->color = r.color;
+    }
+    return out;
 }
 
 int main(int argc, char** argv) {
@@ -276,55 +414,104 @@ int main(int argc, char** argv) {
         if (!(fps > 1 && fps < 241)) fps = 25;
         int W = (int)cap.get(cv::CAP_PROP_FRAME_WIDTH), H = (int)cap.get(cv::CAP_PROP_FRAME_HEIGHT);
         int total = (int)cap.get(cv::CAP_PROP_FRAME_COUNT);
+        if (a.start_frame > 0) cap.set(cv::CAP_PROP_POS_FRAMES, a.start_frame);
         std::string ext = a.out.size() > 4 ? a.out.substr(a.out.size() - 4) : "";
         for (auto& c : ext) c = (char)tolower(c);
         int fourcc = ext == ".avi" ? cv::VideoWriter::fourcc('M', 'J', 'P', 'G') : cv::VideoWriter::fourcc('m', 'p', '4', 'v');
-        cv::VideoWriter writer(a.out, fourcc, fps, cv::Size(W, H));
-        if (!writer.isOpened()) {
-            std::string alt = a.out + ".avi";
-            fprintf(stderr, "打开输出 %s 失败，回退为 MJPG AVI: %s\n", a.out.c_str(), alt.c_str());
-            writer.open(alt, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'), fps, cv::Size(W, H));
-            if (!writer.isOpened()) { fprintf(stderr, "输出视频无法创建\n"); return 5; }
+        cv::VideoWriter writer;
+        if (a.out != "none") {
+            writer.open(a.out, fourcc, fps, cv::Size(W, H));
+            if (!writer.isOpened()) {
+                std::string alt = a.out + ".avi";
+                fprintf(stderr, "打开输出 %s 失败，回退为 MJPG AVI: %s\n", a.out.c_str(), alt.c_str());
+                writer.open(alt, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'), fps, cv::Size(W, H));
+                if (!writer.isOpened()) { fprintf(stderr, "输出视频无法创建\n"); return 5; }
+            }
         }
         if (!a.snap_dir.empty()) mkdir_p(a.snap_dir);
-        printf("input %s: %dx%d @ %.2f fps, %d frames\n", a.in.c_str(), W, H, fps, total);
+        FILE* dump = a.dump.empty() ? nullptr : fopen(a.dump.c_str(), "w");
+        printf("input %s: %dx%d @ %.2f fps, %d frames%s\n", a.in.c_str(), W, H, fps, total, a.legacy ? "  [LEGACY v1 mode]" : "");
         if (face_det) printf("face model : %s (%s, %dx%d)\n", a.face.c_str(), face_det->backend().c_str(), face_det->input_w(), face_det->input_h());
         if (plate_det) printf("plate model: %s (%s, %dx%d), rec: %s, color: %s\n", a.plate.c_str(), plate_det->backend().c_str(),
                               plate_det->input_w(), plate_det->input_h(), a.rec.c_str(), a.color.empty() ? "(HSV 规则)" : a.color.c_str());
 
         ByteTrackConfig tcfg;
         tcfg.max_lost = a.track_lost > 0 ? a.track_lost : (int)std::round(fps);
+        tcfg.fuse_score = a.fuse_score;
         ByteTrackConfig face_cfg = tcfg, plate_cfg = tcfg;
-        face_cfg.track_thresh = std::max(a.face_thr, 0.3f); face_cfg.new_track_thresh = face_cfg.track_thresh + 0.05f;
-        plate_cfg.track_thresh = std::max(a.plate_thr, 0.3f); plate_cfg.new_track_thresh = plate_cfg.track_thresh + 0.05f;
+        face_cfg.track_thresh = a.face_thr; face_cfg.new_track_thresh = a.face_new_thr; face_cfg.buffer = a.face_buffer;
+        plate_cfg.track_thresh = a.plate_thr; plate_cfg.new_track_thresh = a.plate_new_thr; plate_cfg.buffer = a.plate_buffer;
+        if (a.legacy) {   // v1: 阈值 = max(thr, 0.3)，new = +0.05，fuse_score 开
+            face_cfg.track_thresh = std::max(a.face_thr, 0.3f); face_cfg.new_track_thresh = face_cfg.track_thresh + 0.05f;
+            plate_cfg.track_thresh = std::max(a.plate_thr, 0.3f); plate_cfg.new_track_thresh = plate_cfg.track_thresh + 0.05f;
+        }
         ByteTracker face_trk(face_cfg), plate_trk(plate_cfg);
+        PlateGeomConfig pgeo;
+        FaceGeomConfig fgeo; fgeo.min_size = a.face_min_size; fgeo.eye_dist_min = a.face_eye_min;
+        OsdConfig ocfg; ocfg.enable = a.osd; ocfg.episode_gap = a.osd_episode_gap; ocfg.min_changes = a.osd_min_changes; ocfg.min_hits = a.osd_min_hits; ocfg.bg_diff_thr = a.osd_bg_diff;
+        OsdFilter osd(ocfg);
+        for (auto& r : parse_regions(a.osd_mask, W, H)) osd.add_user_region(r);
+        size_t osd_learned_reported = 0;
+
         std::map<int, FaceInfo> faces;
         std::map<int, PlateInfo> plates;
         int face_saved = 0, plate_saved = 0;
         std::vector<std::string> plate_summary;
+        std::vector<PlateResult> plate_results;
+        std::map<std::string, long> cnt;   // 过滤统计
+        const int merge_gap = (int)std::round(a.merge_gap_s * fps);
+        int next_disp_id = 1;
 
         auto finish_face = [&](int id) {
             auto it = faces.find(id);
             if (it == faces.end()) return;
-            if (it->second.hits >= a.min_hits && !a.snap_dir.empty()) { save_face_snap(a.snap_dir, it->second, fps); ++face_saved; }
+            const auto& f = it->second;
+            if (f.hits >= std::max(a.min_hits, a.face_display_hits) && f.max_score >= a.face_out_score) {
+                cnt["face_tracks_out"]++;
+                if (!a.snap_dir.empty()) { save_face_snap(a.snap_dir, f, fps); ++face_saved; }
+            } else cnt["face_tracks_dropped"]++;
             faces.erase(it);
+        };
+        auto plate_ok = [&](const PlateInfo& p) {
+            return p.hits >= a.min_hits && p.valid() && p.text_weight() >= a.min_vote && !p.non_plate(a.valid_ratio) &&
+                   !(a.osd && p.osd_hits * 2 > p.hits);
         };
         auto finish_plate = [&](int id) {
             auto it = plates.find(id);
             if (it == plates.end()) return;
             auto& p = it->second;
-            if (p.hits >= a.min_hits && p.valid()) {
+            if (plate_ok(p)) {
                 char buf[256];
-                snprintf(buf, sizeof(buf), "plate#%d %s %s frames[%d-%d] best=%d votes=%.2f", p.id, p.text().c_str(),
-                         plate_color_cn(p.color()), p.first, p.last, p.best.frame, p.text_weight());
+                snprintf(buf, sizeof(buf), "plate#%d(id %d) %s %s frames[%d-%d] best=%d votes=%.2f valid=%.2f", p.id, p.disp_id, p.text().c_str(),
+                         plate_color_cn(p.color()), p.first, p.last, p.best.frame, p.text_weight(), p.valid_ratio());
                 plate_summary.push_back(buf);
+                PlateResult r;
+                r.id = p.id; r.disp_id = p.disp_id; r.first = p.first; r.last = p.last; r.best_frame = p.best.frame;
+                r.color = p.color(); r.text = p.text(); r.weight = p.text_weight(); r.votes = p.votes;
+                plate_results.push_back(r);
                 if (!a.snap_dir.empty()) { save_plate_snap(a.snap_dir, p, fps); ++plate_saved; }
+            } else if (p.hits >= a.min_hits) {
+                if (p.non_plate(a.valid_ratio)) cnt["plate_tracks_nonplate"]++;
+                else if (a.osd && p.osd_hits * 2 > p.hits) cnt["plate_tracks_osd"]++;
+                else cnt["plate_tracks_lowvote"]++;
             }
             plates.erase(it);
         };
+        // 新轨迹出现稳定车牌号时，若与最近 merge_gap 帧内结束的轨迹同牌（编辑距离<=1），复用其显示 ID
+        auto assign_disp_id = [&](PlateInfo& p, int fidx) {
+            if (p.disp_id > 0 && !p.text().empty()) return;
+            if (!p.valid() || p.text_weight() < a.min_vote) return;
+            std::string t = p.text();
+            for (auto itr = plate_results.rbegin(); itr != plate_results.rend(); ++itr) {
+                if (fidx - itr->last > merge_gap) break;
+                if (utf8_edit_distance(itr->text, t) <= 1) { p.disp_id = itr->disp_id; return; }
+            }
+            if (p.disp_id == 0) p.disp_id = next_disp_id++;
+        };
 
         cv::Mat frame;
-        int fidx = -1;
+        int fidx = a.start_frame - 1;
+        int processed = 0;
         std::vector<double> win;   // 最近 30 帧算法耗时，用于叠加 FPS
         std::map<std::string, double> last;  // 上一帧各模块耗时，用于叠加
         Timer wall;
@@ -332,20 +519,45 @@ int main(int argc, char** argv) {
             Timer ft;
             if (!cap.read(frame) || frame.empty()) break;
             ++fidx;
-            if (a.max_frames > 0 && fidx >= a.max_frames) break;
+            if (a.max_frames > 0 && processed >= a.max_frames) break;
+            ++processed;
             std::map<std::string, double> t;
             t["decode"] = ft.lap();
             Timer algo;
             // ---------------- face ----------------
             std::vector<Detection> fd;
+            std::vector<float> fgeo_score;
             std::vector<STrack*> ftracks;
             if (face_det) {
-                fd = face_det->detect(frame, 0.1f /*低分也保留给 ByteTrack 第二阶段*/, a.nms, &t["face_pre"], &t["face_infer"], &t["face_post"]);
+                auto raw = face_det->detect(frame, 0.1f /*低分也保留给 ByteTrack 第二阶段*/, a.nms, &t["face_pre"], &t["face_infer"], &t["face_post"]);
+                for (auto& d : raw) {
+                    float g = 0.5f;
+                    if (a.face_geom) {
+                        std::string why;
+                        g = face_geometry_score(d, fgeo, &why);
+                        if (g < 0) { if (d.score >= a.face_thr) cnt["face_det_geom_reject_" + why]++; continue; }
+                    } else if (a.face_min_size > 0 && std::min(d.box.width, d.box.height) < a.face_min_size) continue;
+                    if (a.face_skin > 0 && d.score >= 0.2f && face_skin_ratio(frame, d.box) < a.face_skin) { if (d.score >= a.face_thr) cnt["face_det_skin_reject"]++; continue; }
+                    fd.push_back(d); fgeo_score.push_back(g);
+                }
             }
             // ---------------- plate det ----------------
             std::vector<Detection> pd;
+            std::vector<char> pd_osd;
             if (plate_det) {
-                pd = plate_det->detect(frame, 0.1f, a.nms, &t["plate_pre"], &t["plate_infer"], &t["plate_post"]);
+                auto raw = plate_det->detect(frame, 0.1f, a.nms, &t["plate_pre"], &t["plate_infer"], &t["plate_post"]);
+                for (auto& d : raw) {
+                    if (a.plate_geom) {
+                        std::string why;
+                        if (!plate_geometry_ok(d, pgeo, &why)) { if (d.score >= a.plate_thr) cnt["plate_det_geom_reject_" + why]++; continue; }
+                    }
+                    pd.push_back(d);
+                }
+                for (auto& d : pd) pd_osd.push_back(osd.suppressed(d.box) ? 1 : 0);
+                // OSD 屏蔽区内的检测直接丢弃（不参与跟踪）
+                std::vector<Detection> keep;
+                for (size_t i = 0; i < pd.size(); ++i) { if (pd_osd[i]) { if (pd[i].score >= a.plate_thr) cnt["plate_det_osd_suppressed"]++; } else keep.push_back(pd[i]); }
+                pd.swap(keep);
             }
             ft.lap();
             // ---------------- tracking ----------------
@@ -372,7 +584,9 @@ int main(int argc, char** argv) {
                 if (fi.first < 0) { fi.id = tr->id; fi.first = fidx; }
                 fi.last = fidx; fi.hits++;
                 const Detection& d = fd[tr->det_idx];
+                fi.max_score = std::max(fi.max_score, d.score);
                 float q = face_quality(d, frame, nullptr);
+                if (a.face_geom) q = 0.8f * q + 0.2f * fgeo_score[tr->det_idx];
                 if (q > fi.best.quality) {
                     fi.best.quality = q; fi.best.frame = fidx; fi.best.det = d;
                     if (!a.snap_dir.empty()) {
@@ -391,6 +605,7 @@ int main(int argc, char** argv) {
                 if (pi.first < 0) { pi.id = tr->id; pi.first = fidx; }
                 pi.last = fidx; pi.hits++;
                 const Detection& d = pd[tr->det_idx];
+                pi.max_score = std::max(pi.max_score, d.score);
                 pi.layer_votes[d.cls == 1 ? 1 : 0] += d.score;
                 float q = plate_quality(d, frame, nullptr);
                 bool better = q > pi.best.quality;
@@ -412,10 +627,28 @@ int main(int argc, char** argv) {
                 pi.rec_count++;
                 if (rr.text.empty()) continue;
                 pi.raw_last = rr.text;
+                bool fmt = a.strict_format ? strict_plate_format(rr.text, a.max_serial_letters) : rr.valid_format;
                 float w = rr.conf * (0.5f + 0.5f * q);
-                if (rr.valid_format && rr.conf > 0.5f) pi.votes[rr.text] += w;
+                if (!a.legacy && rr.color >= 0) w *= 0.5f + 0.5f * rr.color_conf;   // 颜色分类置信度低（不像车牌底色）降权
+                if (fmt && rr.conf > a.rec_min_conf) { pi.votes[rr.text] += w; pi.rec_valid++; }
                 if (rr.color >= 0) pi.color_votes[rr.color] += rr.color_conf * w;
-                if (rr.valid_format && rr.conf > pi.best_rec_conf) { pi.best_rec_conf = rr.conf; pi.best_rect = rr.rectified.clone(); }
+                if (fmt && rr.conf > pi.best_rec_conf) { pi.best_rec_conf = rr.conf; pi.best_rect = rr.rectified.clone(); }
+                if (!a.legacy) assign_disp_id(pi, fidx);
+            }
+            // OSD 学习：只用"非车牌"的检测（所在轨迹没有稳定合法车牌号），屏蔽从下一帧生效
+            if (plate_det && a.osd) {
+                std::vector<cv::Rect2f> obs;
+                for (auto* tr : ptracks) {
+                    if (tr->det_idx < 0) continue;
+                    auto it = plates.find(tr->id);
+                    bool real = it != plates.end() && it->second.valid() && it->second.text_weight() >= a.min_vote && it->second.valid_ratio() >= 0.5f;
+                    if (!real && pd[tr->det_idx].score >= a.plate_thr) obs.push_back(pd[tr->det_idx].box);
+                }
+                osd.update(fidx, frame, obs);
+                while (osd_learned_reported < osd.learned().size()) {
+                    auto& b = osd.learned()[osd_learned_reported++];
+                    printf("[osd] frame %d learned OSD mask #%zu at (%.0f,%.0f,%.0f,%.0f)\n", fidx, osd_learned_reported, b.x, b.y, b.width, b.height);
+                }
             }
             t["plate_rec"] = t_rec; t["plate_color"] = t_col;
             if (n_rec > 0) { g_stats["rec_per_plate"].add(t_rec / n_rec); g_stats["color_per_plate"].add(t_col / n_rec); }
@@ -425,9 +658,21 @@ int main(int argc, char** argv) {
 
             // ---------------- draw ----------------
             Timer dt;
+            int n_face_shown = 0, n_plate_shown = 0;
+            if (dump) fprintf(dump, "N %d %zu %zu\n", fidx, fd.size(), pd.size());
+            if (a.draw_osd) {
+                for (auto& r : osd.user()) { cv::rectangle(frame, r, cv::Scalar(160, 160, 160), 1); }
+                for (auto& r : osd.learned()) {
+                    cv::rectangle(frame, r, cv::Scalar(160, 160, 160), 1);
+                    put_text(frame, "OSD", cv::Point((int)r.x, (int)(r.y + r.height + 2)), std::max(12, H / 60), cv::Scalar(200, 200, 200));
+                }
+            }
             for (auto* tr : ftracks) {
                 if (tr->det_idx < 0) continue;
+                if (tr->hits < a.face_display_hits) continue;
                 const Detection& d = fd[tr->det_idx];
+                ++n_face_shown;
+                if (dump) fprintf(dump, "SF %d %d %.3f %.0f %.0f %.0f %.0f\n", fidx, tr->id, d.score, d.box.x, d.box.y, d.box.width, d.box.height);
                 cv::rectangle(frame, d.box, cv::Scalar(0, 255, 0), 2);
                 static const cv::Scalar kc[5] = {{255, 0, 0}, {0, 0, 255}, {0, 255, 255}, {255, 0, 255}, {255, 255, 0}};
                 for (size_t k = 0; k < d.kps.size() && k < 5; ++k) cv::circle(frame, d.kps[k], 3, kc[k], -1);
@@ -440,17 +685,23 @@ int main(int argc, char** argv) {
                 if (tr->det_idx < 0) continue;
                 const Detection& d = pd[tr->det_idx];
                 auto it = plates.find(tr->id);
+                if (tr->hits < a.plate_display_hits) continue;
+                if (it != plates.end() && it->second.non_plate(a.valid_ratio)) continue;   // 判为非车牌的不画
+                bool ok = it != plates.end() && it->second.valid() && it->second.text_weight() >= a.min_vote;
+                if (!ok && (it == plates.end() || it->second.max_score < a.plate_show_score)) continue;   // 低分且未识别出合法车牌：不画
+                ++n_plate_shown;
                 std::vector<cv::Point> poly;
                 for (auto& p : d.kps) poly.emplace_back((int)p.x, (int)p.y);
                 cv::rectangle(frame, d.box, cv::Scalar(255, 160, 0), 1);
                 cv::polylines(frame, poly, true, cv::Scalar(0, 255, 255), 2);
-                std::string txt = it != plates.end() ? it->second.text() : "";
+                std::string txt = it != plates.end() ? (a.legacy ? it->second.text() : (ok ? it->second.text() : "")) : "";
                 int col = it != plates.end() ? it->second.color() : PC_UNKNOWN;
-                char head[64]; snprintf(head, sizeof(head), "P%d%s ", tr->id, d.cls == 1 ? "(双)" : "");
-                bool ok = it != plates.end() && it->second.valid();
-                std::string label = std::string(head) + (txt.empty() ? "..." : txt) + (ok || txt.empty() ? "" : "?") + " " + (col >= 0 ? plate_color_cn(col) : "");
-                cv::Scalar bg = color_bgr(col);
-                cv::Scalar fg = (col == PC_WHITE || col == PC_YELLOW) ? cv::Scalar(0, 0, 0) : cv::Scalar(255, 255, 255);
+                int show_id = (it != plates.end() && it->second.disp_id > 0) ? it->second.disp_id : tr->id;
+                if (dump) fprintf(dump, "SP %d %d %d %.3f %.0f %.0f %.0f %.0f %s\n", fidx, tr->id, show_id, d.score, d.box.x, d.box.y, d.box.width, d.box.height, txt.empty() ? "-" : txt.c_str());
+                char head[64]; snprintf(head, sizeof(head), "P%d%s ", show_id, d.cls == 1 ? "(双)" : "");
+                std::string label = std::string(head) + (txt.empty() ? "..." : txt) + (ok || txt.empty() ? "" : "?") + " " + (col >= 0 && !txt.empty() ? plate_color_cn(col) : "");
+                cv::Scalar bg = txt.empty() ? cv::Scalar(128, 128, 128) : color_bgr(col);
+                cv::Scalar fg = (!txt.empty() && (col == PC_WHITE || col == PC_YELLOW)) ? cv::Scalar(0, 0, 0) : cv::Scalar(255, 255, 255);
                 int th = std::max(18, H / 28);
                 put_text(frame, label, cv::Point((int)d.box.x, std::max(0, (int)d.box.y - th - 6)), th, fg, &bg, 3);
             }
@@ -460,13 +711,13 @@ int main(int argc, char** argv) {
             {
                 auto g = [&](const char* k) { auto i = t.find(k); return i == t.end() ? 0.0 : i->second; };
                 std::vector<std::string> lines;
-                char b[160];
-                snprintf(b, sizeof(b), "frame %d  algo %.1f ms  FPS(algo) %.1f  FPS(e2e) %.1f", fidx, algo_ms, 1000.0 / std::max(avg, 1e-3),
-                         last.count("frame_total") ? 1000.0 / std::max(last["frame_total"], 1e-3) : 0.0);
+                char b[200];
+                snprintf(b, sizeof(b), "frame %d  algo %.1f ms  FPS(algo) %.1f  FPS(e2e) %.1f  %s", fidx, algo_ms, 1000.0 / std::max(avg, 1e-3),
+                         last.count("frame_total") ? 1000.0 / std::max(last["frame_total"], 1e-3) : 0.0, a.legacy ? "v1" : "v2");
                 lines.push_back(b);
-                if (face_det) { snprintf(b, sizeof(b), "face det  pre %.1f infer %.1f post %.1f ms  n=%d trk=%d", g("face_pre"), g("face_infer"), g("face_post"), (int)fd.size(), (int)ftracks.size()); lines.push_back(b); }
+                if (face_det) { snprintf(b, sizeof(b), "face det  pre %.1f infer %.1f post %.1f ms  n=%d shown=%d", g("face_pre"), g("face_infer"), g("face_post"), (int)fd.size(), n_face_shown); lines.push_back(b); }
                 if (plate_det) {
-                    snprintf(b, sizeof(b), "plate det pre %.1f infer %.1f post %.1f ms  n=%d trk=%d", g("plate_pre"), g("plate_infer"), g("plate_post"), (int)pd.size(), (int)ptracks.size()); lines.push_back(b);
+                    snprintf(b, sizeof(b), "plate det pre %.1f infer %.1f post %.1f ms  n=%d shown=%d osd=%zu", g("plate_pre"), g("plate_infer"), g("plate_post"), (int)pd.size(), n_plate_shown, osd.learned().size() + osd.user().size()); lines.push_back(b);
                     snprintf(b, sizeof(b), "plate rec %.1f ms (x%d)  color %.1f ms", t_rec, n_rec, t_col); lines.push_back(b);
                 }
                 snprintf(b, sizeof(b), "track %.2f  best-shot %.2f  decode %.1f  draw %.1f  encode %.1f ms  [%s]", g("track"), g("bestshot"), g("decode"),
@@ -483,13 +734,13 @@ int main(int argc, char** argv) {
                     put_text(frame, lines[i], cv::Point(10, 8 + (int)i * (th + 4)), th, cv::Scalar(255, 255, 255));
             }
             t["draw"] = dt.lap();
-            writer.write(frame);
+            if (writer.isOpened()) writer.write(frame);
             t["encode"] = dt.lap();
             t["frame_total"] = ft.total();
             for (auto& kv : t) g_stats[kv.first].add(kv.second);
             last = t;
             if (!a.quiet && (fidx % 30 == 0))
-                printf("[frame %d/%d] algo %.1f ms, faces %zu, plates %zu (tracks %zu/%zu)\n", fidx, total, algo_ms, fd.size(), pd.size(), ftracks.size(), ptracks.size());
+                printf("[frame %d/%d] algo %.1f ms, faces %zu (shown %d), plates %zu (shown %d)\n", fidx, total, algo_ms, fd.size(), n_face_shown, pd.size(), n_plate_shown);
         }
         // 视频结束，输出所有剩余 track
         std::vector<int> ids;
@@ -499,10 +750,10 @@ int main(int argc, char** argv) {
         for (auto& kv : plates) ids.push_back(kv.first);
         for (int id : ids) finish_plate(id);
         writer.release();
+        if (dump) fclose(dump);
 
-        int n = fidx + 1;
         printf("\n================ summary ================\n");
-        printf("frames: %d, wall %.1f s, output: %s\n", n, wall.total() / 1000.0, a.out.c_str());
+        printf("frames: %d, wall %.1f s, output: %s\n", processed, wall.total() / 1000.0, a.out.c_str());
         printf("%-16s %10s\n", "module", "avg ms");
         for (auto& k : g_stat_order) {
             auto it = g_stats.find(k);
@@ -514,8 +765,32 @@ int main(int argc, char** argv) {
         if (at != g_stats.end() && at->second.avg() > 0) printf("avg algo FPS: %.2f\n", 1000.0 / at->second.avg());
         auto ftot = g_stats.find("frame_total");
         if (ftot != g_stats.end() && ftot->second.avg() > 0) printf("avg end-to-end FPS (含解码/叠加/编码): %.2f\n", 1000.0 / ftot->second.avg());
+        printf("filter stats:\n");
+        for (auto& kv : cnt) printf("  %-36s %ld\n", kv.first.c_str(), kv.second);
+        printf("osd masks: learned %zu, user %zu\n", osd.learned().size(), osd.user().size());
+        for (auto& b : osd.learned()) printf("  learned (%.0f,%.0f,%.0f,%.0f)\n", b.x, b.y, b.width, b.height);
         printf("plate tracks (hits>=%d, 有合法车牌号): %zu\n", a.min_hits, plate_summary.size());
         for (auto& s : plate_summary) printf("  %s\n", s.c_str());
+        auto merged = merge_plates(plate_results, merge_gap);
+        printf("plate results merged (同牌、间隔<=%.1fs 合并): %zu\n", a.merge_gap_s, merged.size());
+        for (auto& m : merged) {
+            std::string idl; for (int i : m.ids) idl += (idl.empty() ? "" : ",") + std::to_string(i);
+            printf("  %s %s frames[%d-%d] t=%.1fs weight=%.2f tracks=[%s]\n", m.text.c_str(), plate_color_cn(m.color), m.first, m.last,
+                   m.first / fps, m.weight, idl.c_str());
+        }
+        if (!a.result_json.empty()) {
+            std::ofstream js(a.result_json);
+            js << "{\n  \"plates\": [\n";
+            for (size_t i = 0; i < merged.size(); ++i) {
+                auto& m = merged[i];
+                js << "    {\"plate\": \"" << json_escape(m.text) << "\", \"color\": \"" << plate_color_cn(m.color) << "\", \"first_frame\": " << m.first
+                   << ", \"last_frame\": " << m.last << ", \"first_time_s\": " << m.first / fps << ", \"weight\": " << m.weight << ", \"tracks\": [";
+                for (size_t k = 0; k < m.ids.size(); ++k) js << (k ? ", " : "") << m.ids[k];
+                js << "]}" << (i + 1 < merged.size() ? "," : "") << "\n";
+            }
+            js << "  ],\n  \"face_tracks\": " << cnt["face_tracks_out"] << "\n}\n";
+        }
+        printf("face tracks output: %ld (dropped %ld)\n", cnt["face_tracks_out"], cnt["face_tracks_dropped"]);
         if (!a.snap_dir.empty()) printf("snapshots: %d faces, %d plates -> %s\n", face_saved, plate_saved, a.snap_dir.c_str());
     }
     backend_global_deinit();

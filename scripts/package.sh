@@ -18,7 +18,7 @@ if [ -n "${BSP_MSP_DIR:-}" ]; then
   for l in libax_engine.so libax_interpreter.so libax_sys.so; do cp "$BSP_MSP_DIR/lib/$l" "$STAGE/lib_sdk_fallback/"; done
 fi
 cp "$ROOT"/models/axmodel/*.axmodel "$STAGE/models/"
-cp "$ROOT/board/run.sh" "$STAGE/"
+cp "$ROOT/board/run.sh" "$ROOT/board/demo.cfg" "$STAGE/"
 cp "$ROOT/test_data/test_video.mp4" "$STAGE/" 2>/dev/null || true
 cp "$ROOT/board/README_board.md" "$STAGE/README.md"
 cp -r "$ROOT/third_party_licenses" "$STAGE/"
