@@ -43,6 +43,12 @@ struct Args {
     std::string double_layer_colors = "yellow";   // v2.1: 允许双层的颜色，逗号分隔；all = 不按颜色修正
     bool layer_fallback = true;
     float layer_fallback_conf = 0.7f;
+    // v2.2: ROI 放大二次检测（低分候选附近裁一块放大再检一次，救小/远/模糊车牌）
+    int roi_max = 1;              // 每帧最多几个 ROI（0 关闭）
+    float roi_seed_thr = 0.12f;   // 候选分数下限（上限为 plate_new_thr）
+    float roi_min_w = 60.f;       // 候选框最小宽度（原图像素）
+    float roi_zoom = 2.f;
+    float rec_count_min_w = 80.f; // v2.2: 小于此宽度(原图像素)且未识别出合法号码的识别不计入 rec_max 预算/非车牌比例（远处小牌先跟上、近了再认）         // 放大倍数：ROI 尺寸 = 原图尺寸 / roi_zoom
     float expand_x = 0.02f, expand_y = 0.04f;
     // 车牌过滤
     bool plate_geom = true, strict_format = true;
@@ -69,6 +75,7 @@ static void usage(const char* p) {
            "  车牌检测/跟踪: --plate_thr 0.35(跟踪高分阈值) --plate_new_thr 0.45(新建轨迹) --plate_buffer 0.4(BIoU 外扩) --nms 0.45\n"
            "        --plate_display_hits 2 --plate_show_score 0.5 --rec_max 20 --double_mode merge|separate --expand_x 0.02 --expand_y 0.04\n"
            "        --double_layer_colors yellow(允许双层的颜色, 逗号分隔 blue/yellow/green/white/black, all=不修正) --layer_fallback 1 --layer_fallback_conf 0.7\n"
+           "  ROI 二次检测: --roi_max 1(每帧最多 ROI 数, 0 关闭) --roi_seed_thr 0.12 --roi_min_w 60 --roi_zoom 2 --rec_count_min_w 80\n"
            "  车牌过滤: --plate_geom 1(四角点几何) --strict_format 1 --max_serial_letters 3 --rec_min_conf 0.7\n"
            "        --min_vote 1.0 --valid_ratio 0.3(合法识别占比，低于则判非车牌) --merge_gap 4(秒, 同牌轨迹合并)\n"
            "  OSD: --osd 1(自学习屏蔽) --osd_episode_gap 20 --osd_min_hits 25 --osd_min_changes 2 --osd_bg_diff 10 --draw_osd 1\n"
@@ -117,6 +124,11 @@ static bool parse_kv(const std::string& k0, const std::function<std::string()>& 
     else if (k == "double_layer_colors") a.double_layer_colors = next();
     else if (k == "layer_fallback") B(a.layer_fallback);
     else if (k == "layer_fallback_conf") F(a.layer_fallback_conf);
+    else if (k == "roi_max") I(a.roi_max);
+    else if (k == "roi_seed_thr") F(a.roi_seed_thr);
+    else if (k == "roi_min_w") F(a.roi_min_w);
+    else if (k == "roi_zoom") F(a.roi_zoom);
+    else if (k == "rec_count_min_w") F(a.rec_count_min_w);
     else if (k == "expand_x") F(a.expand_x);
     else if (k == "expand_y") F(a.expand_y);
     else if (k == "plate_geom") B(a.plate_geom);
@@ -143,7 +155,7 @@ static bool parse_kv(const std::string& k0, const std::function<std::string()>& 
         a.face_thr = 0.5f; a.face_new_thr = 0.55f; a.plate_thr = 0.5f; a.plate_new_thr = 0.55f;
         a.plate_buffer = 0.f; a.face_buffer = 0.f; a.fuse_score = true; a.plate_display_hits = 1; a.face_display_hits = 1; a.plate_show_score = 0.f;
         a.plate_geom = false; a.strict_format = false; a.rec_min_conf = 0.5f; a.min_vote = 0.f; a.valid_ratio = 0.f;
-        a.merge_gap_s = 0.f; a.double_layer_colors = "all"; a.osd = false; a.face_geom = false; a.face_skin = 0.f; a.face_min_size = 0; a.face_out_score = 0.f;
+        a.merge_gap_s = 0.f; a.double_layer_colors = "all"; a.roi_max = 0; a.rec_count_min_w = 0.f; a.osd = false; a.face_geom = false; a.face_skin = 0.f; a.face_min_size = 0; a.face_out_score = 0.f;
     }
     else return false;
     return true;
@@ -184,7 +196,7 @@ static bool parse(int argc, char** argv, Args& a) {
 struct Stat { double sum = 0; long n = 0; void add(double v) { sum += v; ++n; } double avg() const { return n ? sum / n : 0; } };
 static std::map<std::string, Stat> g_stats;
 static std::vector<std::string> g_stat_order = {"decode", "face_pre", "face_infer", "face_post", "plate_pre", "plate_infer",
-                                                "plate_post", "plate_rec", "plate_color", "rec_per_plate", "color_per_plate", "track", "bestshot", "draw", "encode", "algo_total", "frame_total"};
+                                                "plate_post", "plate_roi", "plate_rec", "plate_color", "rec_per_plate", "color_per_plate", "track", "bestshot", "draw", "encode", "algo_total", "frame_total"};
 
 // ------------------------------------------------------------------ quality
 static float sharpness(const cv::Mat& bgr, cv::Size norm) {
@@ -260,6 +272,7 @@ struct PlateInfo {
     float color_votes[PC_NUM] = {0};
     float layer_votes[2] = {0};              // 检测器 cls 投票
     float eff_layer_votes[2] = {0};          // v2.1: 识别时实际采用的层数（按颜色修正后）
+    int free_recs = 0;                       // v2.2: 不计预算的小框识别次数
     int layer_overridden = 0;                // v2.1: 检测器判双层、被颜色改成单层的识别次数
     int det_layer() const { return layer_votes[1] > layer_votes[0] ? 1 : 0; }
     int disp_layer() const { return (eff_layer_votes[0] + eff_layer_votes[1] > 0) && eff_layer_votes[1] > eff_layer_votes[0] ? 1 : 0; }  // 未识别前不显示双层
@@ -571,6 +584,47 @@ int main(int argc, char** argv) {
             std::vector<char> pd_osd;
             if (plate_det) {
                 auto raw = plate_det->detect(frame, 0.1f, a.nms, &t["plate_pre"], &t["plate_infer"], &t["plate_post"]);
+                // v2.2: ROI 放大二次检测。全图检测把 2592 宽缩到 640（约 1/4），部分车牌（尤其侧向、反光、对比度低）分数只有 0.1~0.4，
+                // 对这类低分候选，在其周围裁 (W/zoom x H/zoom) 的区域再检一次（等效输入分辨率 x zoom），结果与全图检测合并后统一 NMS。
+                if (a.roi_max > 0 && a.roi_zoom > 1.f) {
+                    Timer rt;
+                    std::vector<const Detection*> seeds;
+                    for (auto& d : raw) {
+                        if (d.score < a.roi_seed_thr || d.score >= a.plate_new_thr || d.box.width < a.roi_min_w) continue;
+                        if (osd.suppressed(d.box)) continue;
+                        bool covered = false;
+                        for (auto& h : raw) if (h.score >= a.plate_new_thr && iou(h.box, d.box) > 0.3f) { covered = true; break; }
+                        if (!covered) seeds.push_back(&d);
+                    }
+                    std::sort(seeds.begin(), seeds.end(), [](const Detection* x, const Detection* y) { return x->score > y->score; });
+                    std::vector<cv::Rect> rois;
+                    int rw = std::min(W, (int)std::round(W / a.roi_zoom)), rh = std::min(H, (int)std::round(H / a.roi_zoom));
+                    for (auto* sd : seeds) {
+                        if ((int)rois.size() >= a.roi_max) break;
+                        cv::Point2f c(sd->box.x + sd->box.width / 2, sd->box.y + sd->box.height / 2);
+                        bool inside = false;
+                        for (auto& r : rois) if (r.contains(cv::Point((int)c.x, (int)c.y))) { inside = true; break; }
+                        if (inside) continue;
+                        int x0 = std::max(0, std::min(W - rw, (int)std::round(c.x - rw / 2.f)));
+                        int y0 = std::max(0, std::min(H - rh, (int)std::round(c.y - rh / 2.f)));
+                        rois.emplace_back(x0, y0, rw, rh);
+                    }
+                    for (auto& r : rois) {
+                        auto rd = plate_det->detect(frame(r), 0.1f, a.nms);
+                        cnt["plate_roi_runs"]++;
+                        const float m = 3.f;
+                        for (auto& d : rd) {
+                            // 被 ROI 边界截断的框丢弃（ROI 边界与原图边界重合时除外）
+                            if ((d.box.x < m && r.x > 0) || (d.box.y < m && r.y > 0) ||
+                                (d.box.x + d.box.width > r.width - m && r.x + r.width < W) || (d.box.y + d.box.height > r.height - m && r.y + r.height < H)) continue;
+                            d.box.x += r.x; d.box.y += r.y;
+                            for (auto& k : d.kps) { k.x += r.x; k.y += r.y; }
+                            raw.push_back(d);
+                        }
+                    }
+                    if (!rois.empty()) nms(raw, a.nms);   // 类别无关 NMS，ROI 的高分框替换全图低分框
+                    t["plate_roi"] = rt.lap();
+                }
                 for (auto& d : raw) {
                     if (a.plate_geom) {
                         std::string why;
@@ -653,7 +707,10 @@ int main(int argc, char** argv) {
                 pi.eff_layer_votes[rr.layer] += 1.f;
                 if (rr.layer_overridden) { pi.layer_overridden++; cnt["plate_rec_layer_overridden"]++; }
                 if (rr.det_layer == 1 && rr.layer == 1 && !a.legacy) cnt["plate_rec_double_kept"]++;
-                if (rr.text.empty()) continue;
+                if (rr.text.empty()) {
+                    if (d.box.width < a.rec_count_min_w && pi.free_recs < a.rec_max) { pi.free_recs++; pi.rec_count--; }
+                    continue;
+                }
                 pi.raw_last = rr.text;
                 bool fmt = a.strict_format ? strict_plate_format(rr.text, a.max_serial_letters) : rr.valid_format;
                 float w = rr.conf * (0.5f + 0.5f * q);
@@ -662,6 +719,7 @@ int main(int argc, char** argv) {
                 if (rr.color >= 0) pi.color_votes[rr.color] += rr.color_conf * w;
                 if (fmt && rr.conf > pi.best_rec_conf) { pi.best_rec_conf = rr.conf; pi.best_rect = rr.rectified.clone(); }
                 if (!a.legacy) assign_disp_id(pi, fidx);
+                if (!(fmt && rr.conf > a.rec_min_conf) && d.box.width < a.rec_count_min_w && pi.free_recs < a.rec_max) { pi.free_recs++; pi.rec_count--; }
             }
             // OSD 学习：只用"非车牌"的检测（所在轨迹没有稳定合法车牌号），屏蔽从下一帧生效
             if (plate_det && a.osd) {
@@ -747,7 +805,7 @@ int main(int argc, char** argv) {
                 lines.push_back(b);
                 if (face_det) { snprintf(b, sizeof(b), "face det  pre %.1f infer %.1f post %.1f ms  n=%d shown=%d", g("face_pre"), g("face_infer"), g("face_post"), (int)fd.size(), n_face_shown); lines.push_back(b); }
                 if (plate_det) {
-                    snprintf(b, sizeof(b), "plate det pre %.1f infer %.1f post %.1f ms  n=%d shown=%d osd=%zu", g("plate_pre"), g("plate_infer"), g("plate_post"), (int)pd.size(), n_plate_shown, osd.learned().size() + osd.user().size()); lines.push_back(b);
+                    snprintf(b, sizeof(b), "plate det pre %.1f infer %.1f post %.1f roi %.1f ms  n=%d shown=%d osd=%zu", g("plate_pre"), g("plate_infer"), g("plate_post"), g("plate_roi"), (int)pd.size(), n_plate_shown, osd.learned().size() + osd.user().size()); lines.push_back(b);
                     snprintf(b, sizeof(b), "plate rec %.1f ms (x%d)  color %.1f ms", t_rec, n_rec, t_col); lines.push_back(b);
                 }
                 snprintf(b, sizeof(b), "track %.2f  best-shot %.2f  decode %.1f  draw %.1f  encode %.1f ms  [%s]", g("track"), g("bestshot"), g("decode"),
