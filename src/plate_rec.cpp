@@ -120,32 +120,82 @@ std::pair<std::string, float> PlateRecognizer::run_rec(const cv::Mat& plate) {
     return {s, n ? sum / n : 0.f};
 }
 
+std::pair<std::string, float> PlateRecognizer::rec_layer(const cv::Mat& rect, int layer) {
+    std::pair<std::string, float> o;
+    if (layer == 1) {
+        if (cfg.double_merge) o = run_rec(merge_double(rect));
+        else {
+            int h = rect.rows, w = rect.cols, line = (int)(h * 0.4f);
+            auto a = run_rec(rect(cv::Rect(0, 0, w, line)));
+            auto b = run_rec(rect(cv::Rect(0, line, w, h - line)));
+            o = {a.first + b.first, (a.second + b.second) * 0.5f};
+        }
+    } else {
+        o = run_rec(rect);
+    }
+    // 去掉偶发的 "'" 字符
+    o.first.erase(std::remove(o.first.begin(), o.first.end(), '\''), o.first.end());
+    return o;
+}
+
+void PlateRecognizer::classify_color(const cv::Mat& rect, int& color, float& conf) {
+    color = PC_UNKNOWN; conf = 0.f;
+    // HSV 统计（中心区域）
+    cv::Mat hsv; cv::Mat center = rect(cv::Rect(rect.cols / 8, rect.rows / 6, std::max(1, rect.cols * 3 / 4), std::max(1, rect.rows * 2 / 3)));
+    cv::cvtColor(center, hsv, cv::COLOR_BGR2HSV);
+    cv::Scalar m = cv::mean(hsv);
+    float sat = (float)m[1], val = (float)m[2];
+    if (cls_) {
+        const int CH = cls_->input_h(), CW = cls_->input_w();
+        cv::resize(rect, cls_in_, cv::Size(CW, CH));
+        std::vector<Tensor> outs;
+        if (cls_->run(cls_in_, outs) && !outs.empty() && outs[0].size() >= 3) {
+            const float* p = outs[0].data;   // [blue, green, yellow]，已 softmax
+            int b = (int)(std::max_element(p, p + 3) - p);
+            static const int map3[3] = {PC_BLUE, PC_GREEN, PC_YELLOW};
+            color = map3[b]; conf = p[b];
+        }
+    }
+    // 低饱和度的牌，分类网络（只有 3 类）不可信 -> 白/黑
+    if (sat < 45.f && (color == PC_UNKNOWN || conf < 0.9f)) {
+        color = val > 110.f ? PC_WHITE : PC_BLACK; conf = 0.5f;
+    } else if (color == PC_UNKNOWN) {
+        double hue = m[0];  // OpenCV H: 0~180
+        color = (hue > 90 && hue < 130) ? PC_BLUE : (hue > 15 && hue < 35) ? PC_YELLOW : (hue >= 35 && hue <= 90) ? PC_GREEN : PC_BLUE;
+        conf = 0.4f;
+    }
+}
+
 PlateRecResult PlateRecognizer::recognize(const cv::Mat& frame, const std::vector<cv::Point2f>& kps, int layer,
                                           double* t_rec, double* t_cls) {
     Timer tm;
     PlateRecResult r;
     r.rectified = rectify(frame, kps, cfg.expand_x, cfg.expand_y);
     if (r.rectified.empty()) return r;
-    if (layer == 1) {
-        if (cfg.double_merge) {
-            auto o = run_rec(merge_double(r.rectified));
-            r.text = o.first; r.conf = o.second;
-        } else {
-            int h = r.rectified.rows, w = r.rectified.cols, line = (int)(h * 0.4f);
-            auto a = run_rec(r.rectified(cv::Rect(0, 0, w, line)));
-            auto b = run_rec(r.rectified(cv::Rect(0, line, w, h - line)));
-            r.text = a.first + b.first; r.conf = (a.second + b.second) * 0.5f;
-        }
-    } else {
-        auto o = run_rec(r.rectified);
-        r.text = o.first; r.conf = o.second;
+    r.det_layer = layer; r.layer = layer;
+    double tcls = 0;
+    float pre_conf = 0.f;
+    // ---- v2.1: 检测器判双层时，先按拉正后整块车牌分类颜色，只有允许双层的颜色才按双层切分拼接 ----
+    if (layer == 1 && cfg.layer_by_color) {
+        Timer tc;
+        classify_color(r.rectified, r.pre_color, pre_conf);
+        tcls += tc.lap();
+        bool allowed = std::find(cfg.double_colors.begin(), cfg.double_colors.end(), r.pre_color) != cfg.double_colors.end();
+        if (!allowed) { r.layer = 0; r.layer_overridden = true; }
     }
-    // 去掉偶发的 "'" 字符
-    r.text.erase(std::remove(r.text.begin(), r.text.end(), '\''), r.text.end());
+    Timer trc;
+    auto o = rec_layer(r.rectified, r.layer);
+    r.text = o.first; r.conf = o.second;
     r.valid_format = check_format(r.text);
-    if (t_rec) *t_rec = tm.lap();
+    if (r.layer_overridden && cfg.layer_fallback && !r.valid_format && pre_conf < cfg.layer_fallback_conf) {
+        // 颜色可能判错（如暗光黄牌判成绿/蓝）：按双层再试一次，合法才采用
+        auto o2 = rec_layer(r.rectified, 1);
+        if (check_format(o2.first)) { r.text = o2.first; r.conf = o2.second; r.valid_format = true; r.layer = 1; r.layer_overridden = false; }
+    }
+    double trec = trc.lap();
 
     // ---- 颜色: 规则(字符) > 分类网络(蓝/绿/黄) > HSV 兜底(白/黑) ----
+    Timer tc2;
     const std::string& s = r.text;
     auto has = [&](const char* k) { return s.find(k) != std::string::npos; };
     int n = utf8_len(s);
@@ -153,34 +203,12 @@ PlateRecResult PlateRecognizer::recognize(const cv::Mat& frame, const std::vecto
     else if (has("港") || has("澳") || has("使") || has("领") || s.rfind("粤Z", 0) == 0) { r.color = PC_BLACK; r.color_conf = 0.9f; }
     else if (has("学") || has("挂")) { r.color = PC_YELLOW; r.color_conf = 0.9f; }
     else if (n == 8 && r.valid_format) { r.color = PC_GREEN; r.color_conf = 0.9f; }
-    else {
-        // HSV 统计（中心区域）
-        cv::Mat hsv; cv::Mat center = r.rectified(cv::Rect(r.rectified.cols / 8, r.rectified.rows / 6,
-                                                            std::max(1, r.rectified.cols * 3 / 4), std::max(1, r.rectified.rows * 2 / 3)));
-        cv::cvtColor(center, hsv, cv::COLOR_BGR2HSV);
-        cv::Scalar m = cv::mean(hsv);
-        float sat = (float)m[1], val = (float)m[2];
-        if (cls_) {
-            const int CH = cls_->input_h(), CW = cls_->input_w();
-            cv::resize(r.rectified, cls_in_, cv::Size(CW, CH));
-            std::vector<Tensor> outs;
-            if (cls_->run(cls_in_, outs) && !outs.empty() && outs[0].size() >= 3) {
-                const float* p = outs[0].data;   // [blue, green, yellow]，已 softmax
-                int b = (int)(std::max_element(p, p + 3) - p);
-                static const int map3[3] = {PC_BLUE, PC_GREEN, PC_YELLOW};
-                r.color = map3[b]; r.color_conf = p[b];
-            }
-        }
-        // 低饱和度的牌，分类网络（只有 3 类）不可信 -> 白/黑
-        if (sat < 45.f && (r.color == PC_UNKNOWN || r.color_conf < 0.9f)) {
-            r.color = val > 110.f ? PC_WHITE : PC_BLACK; r.color_conf = 0.5f;
-        } else if (r.color == PC_UNKNOWN) {
-            double hue = m[0];  // OpenCV H: 0~180
-            r.color = (hue > 90 && hue < 130) ? PC_BLUE : (hue > 15 && hue < 35) ? PC_YELLOW : (hue >= 35 && hue <= 90) ? PC_GREEN : PC_BLUE;
-            r.color_conf = 0.4f;
-        }
-    }
-    if (t_cls) *t_cls = tm.lap();
+    else if (r.pre_color != PC_UNKNOWN) { r.color = r.pre_color; r.color_conf = pre_conf; }   // 已分类过，复用
+    else classify_color(r.rectified, r.color, r.color_conf);
+    tcls += tc2.lap();
+    (void)tm;
+    if (t_rec) *t_rec = trec;
+    if (t_cls) *t_cls = tcls;
     return r;
 }
 

@@ -27,6 +27,7 @@ int main(int argc, char** argv) {
     YoloKpDetector face_det(5, 1, kAnchors); face_det.pad_value = 114;
     YoloKpDetector plate_det(4, 2, kAnchors); plate_det.pad_value = 0;
     PlateRecognizer rec;
+    if (getenv("LAYER_BY_COLOR") && atoi(getenv("LAYER_BY_COLOR")) == 0) rec.cfg.layer_by_color = false;   // v2.1 对比用
     if (!face_det.load(argv[3], det_norm) || !plate_det.load(argv[4], det_norm) || !rec.load(argv[5], argv[6])) { fprintf(stderr, "load fail\n"); return 3; }
     FILE* fl = fopen(list.c_str(), "r");
     char line[4096];
@@ -60,10 +61,11 @@ int main(int argc, char** argv) {
             printf("PLATE\t%zu\t%s\t%d\t%.4f\t%s\t%.4f\t%s\t%.4f\t%d\t%.0f,%.0f,%.0f,%.0f\t%d\n", i, r.text.c_str(), d.cls, d.score,
                    r.color >= 0 ? plate_color_cn(r.color) : "", r.color_conf, r.text.empty() ? "" : "x", r.conf, r.valid_format ? 1 : 0,
                    d.box.x, d.box.y, d.box.width, d.box.height, small[i]);
+            printf("LAYER\t%zu\t%d\t%d\t%d\t%s\n", i, d.cls, r.layer, r.layer_overridden ? 1 : 0, r.pre_color >= 0 ? plate_color_cn(r.pre_color) : "-");
             std::vector<cv::Point> poly; for (auto& p : d.kps) poly.emplace_back((int)p.x, (int)p.y);
             cv::rectangle(img, d.box, cv::Scalar(255, 160, 0), std::max(1, H / 600));
             cv::polylines(img, poly, true, cv::Scalar(0, 255, 255), std::max(2, H / 400));
-            char head[64]; snprintf(head, sizeof(head), "%s%.2f ", d.cls == 1 ? "(双)" : "", d.score);
+            char head[64]; snprintf(head, sizeof(head), "%s%.2f ", r.layer == 1 ? "(双)" : "", d.score);
             std::string label = std::string(head) + (r.text.empty() ? "?" : r.text) + (r.valid_format ? "" : "?") + " " + (r.color >= 0 ? plate_color_cn(r.color) : "");
             char c2[32]; snprintf(c2, sizeof(c2), " rec%.2f", r.conf); label += c2;
             cv::Scalar bg = color_bgr(r.color);

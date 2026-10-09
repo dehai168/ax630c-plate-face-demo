@@ -40,6 +40,9 @@ struct Args {
     int plate_display_hits = 2, face_display_hits = 3;
     float plate_show_score = 0.5f;   // 低分轨迹（未达该检测分）须识别出合法车牌后才显示框
     bool double_merge = true, quiet = false;
+    std::string double_layer_colors = "yellow";   // v2.1: 允许双层的颜色，逗号分隔；all = 不按颜色修正
+    bool layer_fallback = true;
+    float layer_fallback_conf = 0.7f;
     float expand_x = 0.02f, expand_y = 0.04f;
     // 车牌过滤
     bool plate_geom = true, strict_format = true;
@@ -65,6 +68,7 @@ static void usage(const char* p) {
            "  通用: --max_frames N --start_frame N --track_lost <帧,默认=fps> --min_hits 3 --quiet --dump dets.txt --result_json r.json\n"
            "  车牌检测/跟踪: --plate_thr 0.35(跟踪高分阈值) --plate_new_thr 0.45(新建轨迹) --plate_buffer 0.4(BIoU 外扩) --nms 0.45\n"
            "        --plate_display_hits 2 --plate_show_score 0.5 --rec_max 20 --double_mode merge|separate --expand_x 0.02 --expand_y 0.04\n"
+           "        --double_layer_colors yellow(允许双层的颜色, 逗号分隔 blue/yellow/green/white/black, all=不修正) --layer_fallback 1 --layer_fallback_conf 0.7\n"
            "  车牌过滤: --plate_geom 1(四角点几何) --strict_format 1 --max_serial_letters 3 --rec_min_conf 0.7\n"
            "        --min_vote 1.0 --valid_ratio 0.3(合法识别占比，低于则判非车牌) --merge_gap 4(秒, 同牌轨迹合并)\n"
            "  OSD: --osd 1(自学习屏蔽) --osd_episode_gap 20 --osd_min_hits 25 --osd_min_changes 2 --osd_bg_diff 10 --draw_osd 1\n"
@@ -110,6 +114,9 @@ static bool parse_kv(const std::string& k0, const std::function<std::string()>& 
     else if (k == "face_display_hits") I(a.face_display_hits);
     else if (k == "plate_show_score") F(a.plate_show_score);
     else if (k == "double_mode") a.double_merge = next() != "separate";
+    else if (k == "double_layer_colors") a.double_layer_colors = next();
+    else if (k == "layer_fallback") B(a.layer_fallback);
+    else if (k == "layer_fallback_conf") F(a.layer_fallback_conf);
     else if (k == "expand_x") F(a.expand_x);
     else if (k == "expand_y") F(a.expand_y);
     else if (k == "plate_geom") B(a.plate_geom);
@@ -136,7 +143,7 @@ static bool parse_kv(const std::string& k0, const std::function<std::string()>& 
         a.face_thr = 0.5f; a.face_new_thr = 0.55f; a.plate_thr = 0.5f; a.plate_new_thr = 0.55f;
         a.plate_buffer = 0.f; a.face_buffer = 0.f; a.fuse_score = true; a.plate_display_hits = 1; a.face_display_hits = 1; a.plate_show_score = 0.f;
         a.plate_geom = false; a.strict_format = false; a.rec_min_conf = 0.5f; a.min_vote = 0.f; a.valid_ratio = 0.f;
-        a.merge_gap_s = 0.f; a.osd = false; a.face_geom = false; a.face_skin = 0.f; a.face_min_size = 0; a.face_out_score = 0.f;
+        a.merge_gap_s = 0.f; a.double_layer_colors = "all"; a.osd = false; a.face_geom = false; a.face_skin = 0.f; a.face_min_size = 0; a.face_out_score = 0.f;
     }
     else return false;
     return true;
@@ -251,7 +258,12 @@ struct PlateInfo {
     BestShot best;
     std::map<std::string, float> votes;      // 车牌号 -> 累计权重
     float color_votes[PC_NUM] = {0};
-    float layer_votes[2] = {0};
+    float layer_votes[2] = {0};              // 检测器 cls 投票
+    float eff_layer_votes[2] = {0};          // v2.1: 识别时实际采用的层数（按颜色修正后）
+    int layer_overridden = 0;                // v2.1: 检测器判双层、被颜色改成单层的识别次数
+    int det_layer() const { return layer_votes[1] > layer_votes[0] ? 1 : 0; }
+    int disp_layer() const { return (eff_layer_votes[0] + eff_layer_votes[1] > 0) && eff_layer_votes[1] > eff_layer_votes[0] ? 1 : 0; }  // 未识别前不显示双层
+    int layer() const { return (eff_layer_votes[0] + eff_layer_votes[1] > 0) ? (eff_layer_votes[1] > eff_layer_votes[0] ? 1 : 0) : det_layer(); }
     std::string raw_last;                    // 最近一次识别原始结果（无合法结果时显示）
     float best_rec_conf = 0.f;
     cv::Mat best_rect;                       // 识别置信度最高的那次的拉正小图
@@ -323,7 +335,7 @@ static void save_plate_snap(const std::string& dir, const PlateInfo& p, double f
        << ",\n  \"valid_ratio\": " << p.valid_ratio() << ",\n  \"first_frame\": " << p.first
        << ",\n  \"last_frame\": " << p.last << ",\n  \"hits\": " << p.hits << ",\n  \"best_frame\": " << p.best.frame
        << ",\n  \"best_time_s\": " << (fps > 0 ? p.best.frame / fps : 0) << ",\n  \"quality\": " << p.best.quality
-       << ",\n  \"det_score\": " << d.score << ",\n  \"layer\": \"" << (p.layer_votes[1] > p.layer_votes[0] ? "double" : "single")
+       << ",\n  \"det_score\": " << d.score << ",\n  \"det_layer\": \"" << (p.det_layer() ? "double" : "single") << "\",\n  \"layer\": \"" << (p.layer() ? "double" : "single")
        << "\",\n  \"plate_text\": \"" << json_escape(p.text()) << "\",\n  \"color\": \"" << plate_color_en(p.color())
        << "\",\n  \"color_cn\": \"" << plate_color_cn(p.color()) << "\",\n  \"vote_weight\": " << w
        << ",\n  \"vote_second\": " << second << ",\n  \"rec_count\": " << p.rec_count << ",\n  \"best_rec_conf\": " << p.best_rec_conf
@@ -349,7 +361,7 @@ static cv::Scalar color_bgr(int c) {
 
 // ------------------------------------------------------------------ v2: 同牌轨迹合并
 struct PlateResult {
-    int id = 0, disp_id = 0, first = 0, last = 0, best_frame = 0, color = PC_UNKNOWN;
+    int id = 0, disp_id = 0, first = 0, last = 0, best_frame = 0, color = PC_UNKNOWN, layer = 0;
     std::string text;
     float weight = 0.f;
     std::map<std::string, float> votes;
@@ -399,6 +411,18 @@ int main(int argc, char** argv) {
             if (!plate_det->load(a.plate, det_norm)) { fprintf(stderr, "load plate det model failed\n"); return 3; }
             if (!plate_rec.load(a.rec, a.color)) { fprintf(stderr, "load plate rec/color model failed\n"); return 3; }
             plate_rec.cfg.double_merge = a.double_merge;
+            plate_rec.cfg.layer_fallback = a.layer_fallback;
+            plate_rec.cfg.layer_fallback_conf = a.layer_fallback_conf;
+            plate_rec.cfg.double_colors.clear();
+            if (a.double_layer_colors == "all" || a.double_layer_colors == "any") plate_rec.cfg.layer_by_color = false;
+            else {
+                std::stringstream ss(a.double_layer_colors); std::string c;
+                while (std::getline(ss, c, ',')) {
+                    bool f = false;
+                    for (int i = 0; i < PC_NUM; ++i) if (c == plate_color_en(i) || c == plate_color_cn(i)) { plate_rec.cfg.double_colors.push_back(i); f = true; }
+                    if (!f && !c.empty()) { fprintf(stderr, "unknown color in double_layer_colors: %s\n", c.c_str()); return 1; }
+                }
+            }
             plate_rec.cfg.expand_x = a.expand_x;
             plate_rec.cfg.expand_y = a.expand_y;
         }
@@ -482,12 +506,13 @@ int main(int argc, char** argv) {
             auto& p = it->second;
             if (plate_ok(p)) {
                 char buf[256];
-                snprintf(buf, sizeof(buf), "plate#%d(id %d) %s %s frames[%d-%d] best=%d votes=%.2f valid=%.2f", p.id, p.disp_id, p.text().c_str(),
-                         plate_color_cn(p.color()), p.first, p.last, p.best.frame, p.text_weight(), p.valid_ratio());
+                snprintf(buf, sizeof(buf), "plate#%d(id %d) %s %s %s frames[%d-%d] best=%d votes=%.2f valid=%.2f det_layer=%s override=%d", p.id, p.disp_id, p.text().c_str(),
+                         plate_color_cn(p.color()), p.layer() ? "双" : "单", p.first, p.last, p.best.frame, p.text_weight(), p.valid_ratio(),
+                         p.det_layer() ? "双" : "单", p.layer_overridden);
                 plate_summary.push_back(buf);
                 PlateResult r;
                 r.id = p.id; r.disp_id = p.disp_id; r.first = p.first; r.last = p.last; r.best_frame = p.best.frame;
-                r.color = p.color(); r.text = p.text(); r.weight = p.text_weight(); r.votes = p.votes;
+                r.color = p.color(); r.layer = p.layer(); r.text = p.text(); r.weight = p.text_weight(); r.votes = p.votes;
                 plate_results.push_back(r);
                 if (!a.snap_dir.empty()) { save_plate_snap(a.snap_dir, p, fps); ++plate_saved; }
             } else if (p.hits >= a.min_hits) {
@@ -625,6 +650,9 @@ int main(int argc, char** argv) {
                 PlateRecResult rr = plate_rec.recognize(frame, d.kps, layer, &tr_, &tc_);
                 t_rec += tr_; t_col += tc_; ++n_rec;
                 pi.rec_count++;
+                pi.eff_layer_votes[rr.layer] += 1.f;
+                if (rr.layer_overridden) { pi.layer_overridden++; cnt["plate_rec_layer_overridden"]++; }
+                if (rr.det_layer == 1 && rr.layer == 1 && !a.legacy) cnt["plate_rec_double_kept"]++;
                 if (rr.text.empty()) continue;
                 pi.raw_last = rr.text;
                 bool fmt = a.strict_format ? strict_plate_format(rr.text, a.max_serial_letters) : rr.valid_format;
@@ -697,8 +725,10 @@ int main(int argc, char** argv) {
                 std::string txt = it != plates.end() ? (a.legacy ? it->second.text() : (ok ? it->second.text() : "")) : "";
                 int col = it != plates.end() ? it->second.color() : PC_UNKNOWN;
                 int show_id = (it != plates.end() && it->second.disp_id > 0) ? it->second.disp_id : tr->id;
-                if (dump) fprintf(dump, "SP %d %d %d %.3f %.0f %.0f %.0f %.0f %s\n", fidx, tr->id, show_id, d.score, d.box.x, d.box.y, d.box.width, d.box.height, txt.empty() ? "-" : txt.c_str());
-                char head[64]; snprintf(head, sizeof(head), "P%d%s ", show_id, d.cls == 1 ? "(双)" : "");
+                if (dump) fprintf(dump, "SP %d %d %d %.3f %.0f %.0f %.0f %.0f %s %c%c\n", fidx, tr->id, show_id, d.score, d.box.x, d.box.y, d.box.width, d.box.height, txt.empty() ? "-" : txt.c_str(),
+                                  d.cls == 1 ? 'D' : 'S', (a.legacy ? d.cls : (it != plates.end() ? it->second.disp_layer() : 0)) == 1 ? 'D' : 'S');
+                int lay = a.legacy ? d.cls : (it != plates.end() ? it->second.disp_layer() : 0);
+                char head[64]; snprintf(head, sizeof(head), "P%d%s ", show_id, lay == 1 ? "(双)" : "");
                 std::string label = std::string(head) + (txt.empty() ? "..." : txt) + (ok || txt.empty() ? "" : "?") + " " + (col >= 0 && !txt.empty() ? plate_color_cn(col) : "");
                 cv::Scalar bg = txt.empty() ? cv::Scalar(128, 128, 128) : color_bgr(col);
                 cv::Scalar fg = (!txt.empty() && (col == PC_WHITE || col == PC_YELLOW)) ? cv::Scalar(0, 0, 0) : cv::Scalar(255, 255, 255);
@@ -775,7 +805,7 @@ int main(int argc, char** argv) {
         printf("plate results merged (同牌、间隔<=%.1fs 合并): %zu\n", a.merge_gap_s, merged.size());
         for (auto& m : merged) {
             std::string idl; for (int i : m.ids) idl += (idl.empty() ? "" : ",") + std::to_string(i);
-            printf("  %s %s frames[%d-%d] t=%.1fs weight=%.2f tracks=[%s]\n", m.text.c_str(), plate_color_cn(m.color), m.first, m.last,
+            printf("  %s %s%s frames[%d-%d] t=%.1fs weight=%.2f tracks=[%s]\n", m.text.c_str(), plate_color_cn(m.color), m.layer ? "(双)" : "", m.first, m.last,
                    m.first / fps, m.weight, idl.c_str());
         }
         if (!a.result_json.empty()) {
@@ -783,7 +813,7 @@ int main(int argc, char** argv) {
             js << "{\n  \"plates\": [\n";
             for (size_t i = 0; i < merged.size(); ++i) {
                 auto& m = merged[i];
-                js << "    {\"plate\": \"" << json_escape(m.text) << "\", \"color\": \"" << plate_color_cn(m.color) << "\", \"first_frame\": " << m.first
+                js << "    {\"plate\": \"" << json_escape(m.text) << "\", \"color\": \"" << plate_color_cn(m.color) << "\", \"layer\": \"" << (m.layer ? "double" : "single") << "\", \"first_frame\": " << m.first
                    << ", \"last_frame\": " << m.last << ", \"first_time_s\": " << m.first / fps << ", \"weight\": " << m.weight << ", \"tracks\": [";
                 for (size_t k = 0; k < m.ids.size(); ++k) js << (k ? ", " : "") << m.ids[k];
                 js << "]}" << (i + 1 < merged.size() ? "," : "") << "\n";

@@ -19,12 +19,21 @@ struct PlateRecResult {
     float color_conf = 0.f;
     bool valid_format = false;
     cv::Mat rectified;       // 拉正后的车牌小图（双层牌为拼接前）
+    int det_layer = 0;       // 检测器给出的层数（0 单 1 双）
+    int layer = 0;           // 实际采用的层数（按颜色规则修正后）
+    bool layer_overridden = false;  // 检测器判双层、但颜色不允许双层 -> 按单层识别
+    int pre_color = PC_UNKNOWN;     // 判层用的颜色（识别前在拉正图上分类）
 };
 
 struct PlateRecConfig {
     float expand_x = 0.02f;      // 四角点外扩比例（水平，占车牌宽）
     float expand_y = 0.04f;      // （垂直，占车牌高）
     bool double_merge = true;    // 双层牌: 上下切开左右拼接后一次识别；false 则上下分别识别再拼字符串
+    // v2.1: 层数由颜色决定。检测器判双层时，先在拉正图上做颜色分类，颜色不在 double_colors 内则按单层处理
+    bool layer_by_color = true;
+    std::vector<int> double_colors = {PC_YELLOW};   // 允许双层的颜色（默认只有黄牌）
+    bool layer_fallback = true;  // 被改成单层后识别结果格式不合法、且判层颜色置信度低于 layer_fallback_conf 时，再按双层试一次，取合法者
+    float layer_fallback_conf = 0.7f;
 };
 
 class PlateRecognizer {
@@ -42,6 +51,8 @@ public:
 
 private:
     std::pair<std::string, float> run_rec(const cv::Mat& plate);
+    std::pair<std::string, float> rec_layer(const cv::Mat& rect, int layer);
+    void classify_color(const cv::Mat& rect, int& color, float& conf);   // 分类网络 + HSV 兜底
     std::unique_ptr<InferEngine> rec_, cls_;
     cv::Mat rec_in_, cls_in_;
 };

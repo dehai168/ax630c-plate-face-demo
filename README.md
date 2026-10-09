@@ -11,6 +11,14 @@
 
 ---
 
+## 0.1 v2.1 更新：单/双层按颜色修正
+
+国内蓝牌、绿牌只有单层，只有黄牌（以及大车黄绿新能源等，按需配置）才有双层。v2 直接用检测器的单/双层类别，部分绿牌被显示为“(双)”。
+v2.1：检测器判双层时，先在拉正后的整块车牌上做颜色分类，颜色不在 `double_layer_colors`（默认 `yellow`）中则按**单层**拉正识别，叠加/JSON 也显示单层；
+检测器判单层时不改。若改成单层后识别结果格式不合法、且颜色置信度 < `layer_fallback_conf`(0.7)，再按双层识别一次，合法则采用（`layer_fallback 1`，防止暗光黄牌被判成绿/蓝）。还没识别过的新轨迹不显示“(双)”。
+轨迹的层数 = 识别时实际采用层数的多数；snap JSON 同时给出 `det_layer` 与 `layer`，plates.json 增加 `layer` 字段，dump 的 SP 行末尾增加 `检测层/实际层`（S/D）。
+`--legacy` 与 `double_layer_colors all` 恢复旧行为。工具：`tools/build_tools_x86.sh` 编译 image_eval/dump_dets（`LAYER_BY_COLOR=0` 关闭修正对比）。
+
 ## 0. v2 更新（2026-10-09）
 
 模型未变（axmodel 不需要重新编译），只改 C++ 前后处理/跟踪；所有新参数可通过命令行或 `board/demo.cfg`（`--config`）配置；`--legacy` 完全恢复 v1 行为用于对比。
