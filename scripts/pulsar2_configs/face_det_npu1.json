@@ -1,0 +1,39 @@
+{
+  "model_type": "ONNX",
+  "npu_mode": "NPU1",
+  "quant": {
+    "input_configs": [
+      {
+        "tensor_name": "images",
+        "calibration_dataset": "CALIB_DIR/face_calib.tar",
+        "calibration_format": "Image",
+        "calibration_size": -1,
+        "calibration_mean": [
+          0,
+          0,
+          0
+        ],
+        "calibration_std": [
+          255.0,
+          255.0,
+          255.0
+        ]
+      }
+    ],
+    "calibration_method": "MinMax",
+    "precision_analysis": true,
+    "precision_analysis_method": "EndToEnd"
+  },
+  "input_processors": [
+    {
+      "tensor_name": "images",
+      "tensor_format": "RGB",
+      "src_format": "RGB",
+      "src_dtype": "U8",
+      "src_layout": "NHWC"
+    }
+  ],
+  "compiler": {
+    "check": 0
+  }
+}

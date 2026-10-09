@@ -1,0 +1,50 @@
+{
+  "model_type": "ONNX",
+  "npu_mode": "NPU1",
+  "quant": {
+    "input_configs": [
+      {
+        "tensor_name": "data",
+        "calibration_dataset": "CALIB_DIR/plate_rec_calib.tar",
+        "calibration_format": "Image",
+        "calibration_size": -1,
+        "calibration_mean": [
+          127.5,
+          127.5,
+          127.5
+        ],
+        "calibration_std": [
+          127.5,
+          127.5,
+          127.5
+        ]
+      }
+    ],
+    "calibration_method": "MinMax",
+    "precision_analysis": true,
+    "precision_analysis_method": "EndToEnd",
+    "layer_configs": [
+      {
+        "start_tensor_names": [
+          "DEFAULT"
+        ],
+        "end_tensor_names": [
+          "DEFAULT"
+        ],
+        "data_type": "U16"
+      }
+    ]
+  },
+  "input_processors": [
+    {
+      "tensor_name": "data",
+      "tensor_format": "BGR",
+      "src_format": "BGR",
+      "src_dtype": "U8",
+      "src_layout": "NHWC"
+    }
+  ],
+  "compiler": {
+    "check": 0
+  }
+}

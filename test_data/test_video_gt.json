@@ -1,0 +1,126 @@
+{
+ "fps": 15,
+ "size": [
+  1280,
+  720
+ ],
+ "segments": [
+  {
+   "index": 0,
+   "layout": "split",
+   "start_frame": 0,
+   "end_frame": 38,
+   "plate_text": "皖ALJ233",
+   "ccpd_file": "0766-0_5-0,490_610,595-610,595_2,590_0,490_601,495-0_0_10_8_26_27_27-66-84_ccpd_fn_025906.jpg",
+   "face_image": "nasa_1.jpg"
+  },
+  {
+   "index": 1,
+   "layout": "split",
+   "start_frame": 60,
+   "end_frame": 98,
+   "plate_text": "皖AZ661H",
+   "ccpd_file": "0441-2_3-258,597_576,713-576,697_270,713_258,613_564,597-0_0_23_30_30_25_7-107-97_ccpd_weather_012657.jpg",
+   "face_image": "nasa_2.jpg"
+  },
+  {
+   "index": 2,
+   "layout": "plate_full",
+   "start_frame": 120,
+   "end_frame": 158,
+   "plate_text": "皖A77J75",
+   "ccpd_file": "0376939655172-85_106-123,475_439,582-426,550_124,580_157,487_459,457-0_0_31_31_8_31_29-123-89_ccpd_base_008126.jpg",
+   "face_image": null
+  },
+  {
+   "index": 3,
+   "layout": "split",
+   "start_frame": 180,
+   "end_frame": 218,
+   "plate_text": "皖ALM353",
+   "ccpd_file": "1034-14_32-118,523_475,765-475,765_172,688_118,523_421,600-0_0_10_11_27_29_27-12-3_ccpd_fn_008855.jpg",
+   "face_image": "nasa_1.jpg"
+  },
+  {
+   "index": 4,
+   "layout": "face_full",
+   "start_frame": 240,
+   "end_frame": 278,
+   "plate_text": null,
+   "ccpd_file": null,
+   "face_image": "nasa_2.jpg"
+  },
+  {
+   "index": 5,
+   "layout": "split",
+   "start_frame": 300,
+   "end_frame": 338,
+   "plate_text": "粤SHE678",
+   "ccpd_file": "0413-15_26-243,427_483,571-483,571_259,510_243,427_467,488-19_16_7_4_30_31_32-63-260_ccpd_tilt_023608.jpg",
+   "face_image": "nasa_3.jpg"
+  },
+  {
+   "index": 6,
+   "layout": "split",
+   "start_frame": 360,
+   "end_frame": 398,
+   "plate_text": "皖AD10605",
+   "ccpd_file": "047473659003831416-80_90-170&495_475&638-462&574_170&638_170&554_475&495-0_0_3_25_24_30_24_29-66-4.jpg",
+   "face_image": "nasa_1.jpg"
+  },
+  {
+   "index": 7,
+   "layout": "plate_full",
+   "start_frame": 420,
+   "end_frame": 458,
+   "plate_text": "皖AD49637",
+   "ccpd_file": "03541068007662835-90_90-200&549_525&648-525&644_200&648_200&554_522&549-0_0_3_28_33_30_27_31-98-5.jpg",
+   "face_image": null
+  },
+  {
+   "index": 8,
+   "layout": "split",
+   "start_frame": 480,
+   "end_frame": 518,
+   "plate_text": "皖AD25955",
+   "ccpd_file": "010797413793103448-88_268-212&574_379&633-379&625_215&633_212&582_377&574-0_0_3_26_29_33_29_29-79-8.jpg",
+   "face_image": "nasa_3.jpg"
+  },
+  {
+   "index": 9,
+   "layout": "face_full",
+   "start_frame": 540,
+   "end_frame": 578,
+   "plate_text": null,
+   "ccpd_file": null,
+   "face_image": "nasa_1.jpg"
+  },
+  {
+   "index": 10,
+   "layout": "split",
+   "start_frame": 600,
+   "end_frame": 638,
+   "plate_text": "皖AD18577",
+   "ccpd_file": "003663793103448276-90_264-304&485_406&518-406&518_304&518_307&485_404&486-0_0_3_25_32_29_31_31-93-10.jpg",
+   "face_image": "nasa_2.jpg"
+  },
+  {
+   "index": 11,
+   "layout": "split",
+   "start_frame": 660,
+   "end_frame": 698,
+   "plate_text": "皖AD16669",
+   "ccpd_file": "03885416666666667-90_250-206&480_579&575-579&574_236&575_206&480_562&483-0_0_3_25_30_30_30_33-121-8.jpg",
+   "face_image": "nasa_3.jpg"
+  }
+ ],
+ "sources": {
+  "plates": "CCPD (detectRecog/CCPD, MIT License)",
+  "faces": [
+   "nasa_1.jpg",
+   "nasa_2.jpg",
+   "nasa_3.jpg",
+   "NASA, Public Domain via Wikimedia Commons"
+  ]
+ }
+}

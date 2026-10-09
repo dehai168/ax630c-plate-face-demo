@@ -1,0 +1,65 @@
+cmake_minimum_required(VERSION 3.13)
+project(plate_face_demo CXX)
+
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE Release)
+endif()
+
+# BACKEND: ORT (x86 / PC 验证, ONNX Runtime) 或 AX (AX630C 板端, AXEngine)
+set(BACKEND "ORT" CACHE STRING "Inference backend: ORT or AX")
+set(ORT_DIR "" CACHE PATH "onnxruntime 预编译包目录 (含 include/ lib/)")
+set(BSP_MSP_DIR "" CACHE PATH "AX620E SDK msp/out/arm64_glibc 目录 (含 include/ lib/)")
+
+find_package(OpenCV REQUIRED COMPONENTS core imgproc imgcodecs videoio)
+message(STATUS "OpenCV ${OpenCV_VERSION}: ${OpenCV_DIR}")
+
+set(SRCS
+  src/main.cpp src/detector.cpp src/plate_rec.cpp src/bytetrack.cpp src/text_render.cpp)
+
+if(BACKEND STREQUAL "AX")
+  if(NOT BSP_MSP_DIR)
+    message(FATAL_ERROR "BACKEND=AX 需要 -DBSP_MSP_DIR=<ax620e_bsp_sdk>/msp/out/arm64_glibc")
+  endif()
+  list(APPEND SRCS src/infer/engine_ax.cpp)
+else()
+  if(NOT ORT_DIR)
+    message(FATAL_ERROR "BACKEND=ORT 需要 -DORT_DIR=<onnxruntime-linux-x64-x.y.z>")
+  endif()
+  list(APPEND SRCS src/infer/engine_ort.cpp)
+endif()
+
+add_executable(plate_face_demo ${SRCS})
+target_include_directories(plate_face_demo PRIVATE src ${OpenCV_INCLUDE_DIRS})
+target_link_libraries(plate_face_demo PRIVATE ${OpenCV_LIBS})
+target_compile_options(plate_face_demo PRIVATE -O2 -Wall -Wno-unused-function)
+
+find_package(Threads REQUIRED)
+if(BACKEND STREQUAL "AX")
+  target_compile_definitions(plate_face_demo PRIVATE PFD_BACKEND_AX)
+  target_include_directories(plate_face_demo PRIVATE ${BSP_MSP_DIR}/include)
+  target_link_directories(plate_face_demo PRIVATE ${BSP_MSP_DIR}/lib)
+  # 与 ax-samples ax620e 示例一致: ax_engine + ax_interpreter + ax_sys（本 demo 不用 IVPS，未链接 ax_ivps）
+  target_link_libraries(plate_face_demo PRIVATE ax_engine ax_interpreter ax_sys Threads::Threads dl m)
+  # 运行时优先在可执行文件同目录的 lib/ 找 FFmpeg 等依赖库；AX 库用板子系统自带的 (/soc/lib 或 /opt/lib)
+  set_target_properties(plate_face_demo PROPERTIES INSTALL_RPATH "\$ORIGIN/lib" BUILD_WITH_INSTALL_RPATH ON)
+  target_link_options(plate_face_demo PRIVATE -static-libstdc++ -static-libgcc -Wl,--allow-shlib-undefined -Wl,-rpath-link,${BSP_MSP_DIR}/lib)
+else()
+  target_compile_definitions(plate_face_demo PRIVATE PFD_BACKEND_ORT)
+  target_include_directories(plate_face_demo PRIVATE ${ORT_DIR}/include)
+  target_link_directories(plate_face_demo PRIVATE ${ORT_DIR}/lib)
+  target_link_libraries(plate_face_demo PRIVATE onnxruntime Threads::Threads)
+  set_target_properties(plate_face_demo PROPERTIES INSTALL_RPATH "${ORT_DIR}/lib" BUILD_WITH_INSTALL_RPATH ON)
+endif()
+
+install(TARGETS plate_face_demo DESTINATION .)
+
+# 视频读写自检小工具（验证板端 OpenCV+FFmpeg 能否读 mp4 / 写 mp4,avi）
+add_executable(video_io_selftest tools/video_io_selftest.cpp)
+target_include_directories(video_io_selftest PRIVATE ${OpenCV_INCLUDE_DIRS})
+target_link_libraries(video_io_selftest PRIVATE ${OpenCV_LIBS})
+if(BACKEND STREQUAL "AX")
+  set_target_properties(video_io_selftest PROPERTIES INSTALL_RPATH "\$ORIGIN/lib" BUILD_WITH_INSTALL_RPATH ON)
+  target_link_options(video_io_selftest PRIVATE -static-libstdc++ -static-libgcc)
+endif()
