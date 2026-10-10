@@ -48,6 +48,8 @@ struct Args {
     float roi_seed_thr = 0.12f;   // 候选分数下限（上限为 plate_new_thr）
     float roi_min_w = 60.f;       // 候选框最小宽度（原图像素）
     float roi_zoom = 2.f;
+    std::string yellowgreen_letters = "ABCDEFGHJK", yellowgreen_colors = "green,yellow";   // v2.3 黄绿规则
+    bool yellowgreen_rule = true;
     float rec_count_min_w = 80.f; // v2.2: 小于此宽度(原图像素)且未识别出合法号码的识别不计入 rec_max 预算/非车牌比例（远处小牌先跟上、近了再认）         // 放大倍数：ROI 尺寸 = 原图尺寸 / roi_zoom
     float expand_x = 0.02f, expand_y = 0.04f;
     // 车牌过滤
@@ -76,6 +78,7 @@ static void usage(const char* p) {
            "        --plate_display_hits 2 --plate_show_score 0.5 --rec_max 20 --double_mode merge|separate --expand_x 0.02 --expand_y 0.04\n"
            "        --double_layer_colors yellow(允许双层的颜色, 逗号分隔 blue/yellow/green/white/black, all=不修正) --layer_fallback 1 --layer_fallback_conf 0.7\n"
            "  ROI 二次检测: --roi_max 1(每帧最多 ROI 数, 0 关闭) --roi_seed_thr 0.12 --roi_min_w 60 --roi_zoom 2 --rec_count_min_w 80\n"
+           "  黄绿: --yellowgreen_rule 1 --yellowgreen_letters ABCDEFGHJK --yellowgreen_colors green,yellow (8 位合法+末位动力字母+分类色在列表内 -> 黄绿)\n"
            "  车牌过滤: --plate_geom 1(四角点几何) --strict_format 1 --max_serial_letters 3 --rec_min_conf 0.7\n"
            "        --min_vote 1.0 --valid_ratio 0.3(合法识别占比，低于则判非车牌) --merge_gap 4(秒, 同牌轨迹合并)\n"
            "  OSD: --osd 1(自学习屏蔽) --osd_episode_gap 20 --osd_min_hits 25 --osd_min_changes 2 --osd_bg_diff 10 --draw_osd 1\n"
@@ -129,6 +132,9 @@ static bool parse_kv(const std::string& k0, const std::function<std::string()>& 
     else if (k == "roi_min_w") F(a.roi_min_w);
     else if (k == "roi_zoom") F(a.roi_zoom);
     else if (k == "rec_count_min_w") F(a.rec_count_min_w);
+    else if (k == "yellowgreen_rule") B(a.yellowgreen_rule);
+    else if (k == "yellowgreen_letters") a.yellowgreen_letters = next();
+    else if (k == "yellowgreen_colors") a.yellowgreen_colors = next();
     else if (k == "expand_x") F(a.expand_x);
     else if (k == "expand_y") F(a.expand_y);
     else if (k == "plate_geom") B(a.plate_geom);
@@ -155,7 +161,7 @@ static bool parse_kv(const std::string& k0, const std::function<std::string()>& 
         a.face_thr = 0.5f; a.face_new_thr = 0.55f; a.plate_thr = 0.5f; a.plate_new_thr = 0.55f;
         a.plate_buffer = 0.f; a.face_buffer = 0.f; a.fuse_score = true; a.plate_display_hits = 1; a.face_display_hits = 1; a.plate_show_score = 0.f;
         a.plate_geom = false; a.strict_format = false; a.rec_min_conf = 0.5f; a.min_vote = 0.f; a.valid_ratio = 0.f;
-        a.merge_gap_s = 0.f; a.double_layer_colors = "all"; a.roi_max = 0; a.rec_count_min_w = 0.f; a.osd = false; a.face_geom = false; a.face_skin = 0.f; a.face_min_size = 0; a.face_out_score = 0.f;
+        a.merge_gap_s = 0.f; a.double_layer_colors = "all"; a.roi_max = 0; a.rec_count_min_w = 0.f; a.yellowgreen_rule = false; a.osd = false; a.face_geom = false; a.face_skin = 0.f; a.face_min_size = 0; a.face_out_score = 0.f;
     }
     else return false;
     return true;
@@ -270,8 +276,12 @@ struct PlateInfo {
     BestShot best;
     std::map<std::string, float> votes;      // 车牌号 -> 累计权重
     float color_votes[PC_NUM] = {0};
+    float cls_votes[PC_NUM] = {0};           // v2.3: 分类网络颜色投票（黄绿规则用）
+    int cls_color() const { int c = PC_UNKNOWN; float b = 0; for (int i = 0; i < PC_NUM; ++i) if (cls_votes[i] > b) { b = cls_votes[i]; c = i; } return c; }
     float layer_votes[2] = {0};              // 检测器 cls 投票
     float eff_layer_votes[2] = {0};          // v2.1: 识别时实际采用的层数（按颜色修正后）
+    int final_col = PC_UNKNOWN;              // v2.3: 按最终号码修正后的颜色（黄绿规则）
+    const char* col_src = "cls";
     int free_recs = 0;                       // v2.2: 不计预算的小框识别次数
     int layer_overridden = 0;                // v2.1: 检测器判双层、被颜色改成单层的识别次数
     int det_layer() const { return layer_votes[1] > layer_votes[0] ? 1 : 0; }
@@ -349,8 +359,8 @@ static void save_plate_snap(const std::string& dir, const PlateInfo& p, double f
        << ",\n  \"last_frame\": " << p.last << ",\n  \"hits\": " << p.hits << ",\n  \"best_frame\": " << p.best.frame
        << ",\n  \"best_time_s\": " << (fps > 0 ? p.best.frame / fps : 0) << ",\n  \"quality\": " << p.best.quality
        << ",\n  \"det_score\": " << d.score << ",\n  \"det_layer\": \"" << (p.det_layer() ? "double" : "single") << "\",\n  \"layer\": \"" << (p.layer() ? "double" : "single")
-       << "\",\n  \"plate_text\": \"" << json_escape(p.text()) << "\",\n  \"color\": \"" << plate_color_en(p.color())
-       << "\",\n  \"color_cn\": \"" << plate_color_cn(p.color()) << "\",\n  \"vote_weight\": " << w
+       << "\",\n  \"plate_text\": \"" << json_escape(p.text()) << "\",\n  \"color\": \"" << plate_color_en(p.final_col) << "\",\n  \"color_src\": \"" << p.col_src << "\",\n  \"color_voted\": \"" << plate_color_en(p.color())
+       << "\",\n  \"color_cn\": \"" << plate_color_cn(p.final_col) << "\",\n  \"vote_weight\": " << w
        << ",\n  \"vote_second\": " << second << ",\n  \"rec_count\": " << p.rec_count << ",\n  \"best_rec_conf\": " << p.best_rec_conf
        << ",\n  \"box_xywh\": [" << d.box.x << ", " << d.box.y << ", " << d.box.width << ", " << d.box.height << "],\n  \"corners\": [";
     for (size_t i = 0; i < d.kps.size(); ++i) js << (i ? ", " : "") << "[" << d.kps[i].x << ", " << d.kps[i].y << "]";
@@ -368,13 +378,14 @@ static cv::Scalar color_bgr(int c) {
         case PC_GREEN: return {60, 200, 60};
         case PC_WHITE: return {235, 235, 235};
         case PC_BLACK: return {30, 30, 30};
+        case PC_YELLOWGREEN: return {40, 220, 170};   // 黄绿
         default: return {128, 128, 128};
     }
 }
 
 // ------------------------------------------------------------------ v2: 同牌轨迹合并
 struct PlateResult {
-    int id = 0, disp_id = 0, first = 0, last = 0, best_frame = 0, color = PC_UNKNOWN, layer = 0;
+    int id = 0, disp_id = 0, first = 0, last = 0, best_frame = 0, color = PC_UNKNOWN, layer = 0, cls_color = PC_UNKNOWN;
     std::string text;
     float weight = 0.f;
     std::map<std::string, float> votes;
@@ -399,6 +410,7 @@ static std::vector<PlateResult> merge_plates(std::vector<PlateResult> in, int ga
         g->ids.push_back(r.id);
         float b = 0; for (auto& kv : g->votes) if (kv.second > b) { b = kv.second; g->text = kv.first; }
         if (r.weight > 0 && g->color == PC_UNKNOWN) g->color = r.color;
+        if (r.weight > 0 && g->cls_color == PC_UNKNOWN) g->cls_color = r.cls_color;
     }
     return out;
 }
@@ -426,6 +438,18 @@ int main(int argc, char** argv) {
             plate_rec.cfg.double_merge = a.double_merge;
             plate_rec.cfg.layer_fallback = a.layer_fallback;
             plate_rec.cfg.layer_fallback_conf = a.layer_fallback_conf;
+            plate_rec.cfg.yellowgreen_rule = a.yellowgreen_rule;
+            plate_rec.cfg.yellowgreen_letters = a.yellowgreen_letters;
+            plate_rec.cfg.max_serial_letters = a.max_serial_letters;
+            plate_rec.cfg.yellowgreen_colors.clear();
+            {
+                std::stringstream ss(a.yellowgreen_colors); std::string c;
+                while (std::getline(ss, c, ',')) {
+                    bool f = false;
+                    for (int i = 0; i < PC_NUM; ++i) if (c == plate_color_en(i) || c == plate_color_cn(i)) { plate_rec.cfg.yellowgreen_colors.push_back(i); f = true; }
+                    if (!f && !c.empty()) { fprintf(stderr, "unknown color in yellowgreen_colors: %s\n", c.c_str()); return 1; }
+                }
+            }
             plate_rec.cfg.double_colors.clear();
             if (a.double_layer_colors == "all" || a.double_layer_colors == "any") plate_rec.cfg.layer_by_color = false;
             else {
@@ -520,12 +544,12 @@ int main(int argc, char** argv) {
             if (plate_ok(p)) {
                 char buf[256];
                 snprintf(buf, sizeof(buf), "plate#%d(id %d) %s %s %s frames[%d-%d] best=%d votes=%.2f valid=%.2f det_layer=%s override=%d", p.id, p.disp_id, p.text().c_str(),
-                         plate_color_cn(p.color()), p.layer() ? "双" : "单", p.first, p.last, p.best.frame, p.text_weight(), p.valid_ratio(),
+                         plate_color_cn(p.final_col), p.layer() ? "双" : "单", p.first, p.last, p.best.frame, p.text_weight(), p.valid_ratio(),
                          p.det_layer() ? "双" : "单", p.layer_overridden);
                 plate_summary.push_back(buf);
                 PlateResult r;
                 r.id = p.id; r.disp_id = p.disp_id; r.first = p.first; r.last = p.last; r.best_frame = p.best.frame;
-                r.color = p.color(); r.layer = p.layer(); r.text = p.text(); r.weight = p.text_weight(); r.votes = p.votes;
+                r.color = p.final_col; r.cls_color = p.cls_color(); r.layer = p.layer(); r.text = p.text(); r.weight = p.text_weight(); r.votes = p.votes;
                 plate_results.push_back(r);
                 if (!a.snap_dir.empty()) { save_plate_snap(a.snap_dir, p, fps); ++plate_saved; }
             } else if (p.hits >= a.min_hits) {
@@ -717,8 +741,11 @@ int main(int argc, char** argv) {
                 if (!a.legacy && rr.color >= 0) w *= 0.5f + 0.5f * rr.color_conf;   // 颜色分类置信度低（不像车牌底色）降权
                 if (fmt && rr.conf > a.rec_min_conf) { pi.votes[rr.text] += w; pi.rec_valid++; }
                 if (rr.color >= 0) pi.color_votes[rr.color] += rr.color_conf * w;
+                if (rr.cls_color >= 0) pi.cls_votes[rr.cls_color] += w;
                 if (fmt && rr.conf > pi.best_rec_conf) { pi.best_rec_conf = rr.conf; pi.best_rect = rr.rectified.clone(); }
                 if (!a.legacy) assign_disp_id(pi, fidx);
+                pi.final_col = resolve_plate_color(pi.text(), pi.color(), pi.cls_color(), plate_rec.cfg, &pi.col_src);
+                if (std::string(pi.col_src) != "rule" && utf8_len(pi.text()) == 8 && pi.final_col == PC_GREEN) pi.col_src = "rule";
                 if (!(fmt && rr.conf > a.rec_min_conf) && d.box.width < a.rec_count_min_w && pi.free_recs < a.rec_max) { pi.free_recs++; pi.rec_count--; }
             }
             // OSD 学习：只用"非车牌"的检测（所在轨迹没有稳定合法车牌号），屏蔽从下一帧生效
@@ -781,7 +808,7 @@ int main(int argc, char** argv) {
                 cv::rectangle(frame, d.box, cv::Scalar(255, 160, 0), 1);
                 cv::polylines(frame, poly, true, cv::Scalar(0, 255, 255), 2);
                 std::string txt = it != plates.end() ? (a.legacy ? it->second.text() : (ok ? it->second.text() : "")) : "";
-                int col = it != plates.end() ? it->second.color() : PC_UNKNOWN;
+                int col = it != plates.end() ? it->second.final_col : PC_UNKNOWN;
                 int show_id = (it != plates.end() && it->second.disp_id > 0) ? it->second.disp_id : tr->id;
                 if (dump) fprintf(dump, "SP %d %d %d %.3f %.0f %.0f %.0f %.0f %s %c%c\n", fidx, tr->id, show_id, d.score, d.box.x, d.box.y, d.box.width, d.box.height, txt.empty() ? "-" : txt.c_str(),
                                   d.cls == 1 ? 'D' : 'S', (a.legacy ? d.cls : (it != plates.end() ? it->second.disp_layer() : 0)) == 1 ? 'D' : 'S');
@@ -789,7 +816,7 @@ int main(int argc, char** argv) {
                 char head[64]; snprintf(head, sizeof(head), "P%d%s ", show_id, lay == 1 ? "(双)" : "");
                 std::string label = std::string(head) + (txt.empty() ? "..." : txt) + (ok || txt.empty() ? "" : "?") + " " + (col >= 0 && !txt.empty() ? plate_color_cn(col) : "");
                 cv::Scalar bg = txt.empty() ? cv::Scalar(128, 128, 128) : color_bgr(col);
-                cv::Scalar fg = (!txt.empty() && (col == PC_WHITE || col == PC_YELLOW)) ? cv::Scalar(0, 0, 0) : cv::Scalar(255, 255, 255);
+                cv::Scalar fg = (!txt.empty() && (col == PC_WHITE || col == PC_YELLOW || col == PC_YELLOWGREEN)) ? cv::Scalar(0, 0, 0) : cv::Scalar(255, 255, 255);
                 int th = std::max(18, H / 28);
                 put_text(frame, label, cv::Point((int)d.box.x, std::max(0, (int)d.box.y - th - 6)), th, fg, &bg, 3);
             }
@@ -860,6 +887,8 @@ int main(int argc, char** argv) {
         printf("plate tracks (hits>=%d, 有合法车牌号): %zu\n", a.min_hits, plate_summary.size());
         for (auto& s : plate_summary) printf("  %s\n", s.c_str());
         auto merged = merge_plates(plate_results, merge_gap);
+        std::vector<std::string> merged_src;
+        for (auto& m : merged) { const char* src = "cls"; m.color = resolve_plate_color(m.text, m.color, m.cls_color, plate_rec.cfg, &src); if (utf8_len(m.text) == 8 && m.color == PC_GREEN) src = "rule"; merged_src.push_back(src); }   // v2.3: 合并后按最终号码再定颜色
         printf("plate results merged (同牌、间隔<=%.1fs 合并): %zu\n", a.merge_gap_s, merged.size());
         for (auto& m : merged) {
             std::string idl; for (int i : m.ids) idl += (idl.empty() ? "" : ",") + std::to_string(i);
@@ -871,7 +900,7 @@ int main(int argc, char** argv) {
             js << "{\n  \"plates\": [\n";
             for (size_t i = 0; i < merged.size(); ++i) {
                 auto& m = merged[i];
-                js << "    {\"plate\": \"" << json_escape(m.text) << "\", \"color\": \"" << plate_color_cn(m.color) << "\", \"layer\": \"" << (m.layer ? "double" : "single") << "\", \"first_frame\": " << m.first
+                js << "    {\"plate\": \"" << json_escape(m.text) << "\", \"color\": \"" << plate_color_cn(m.color) << "\", \"color_src\": \"" << merged_src[i] << "\", \"layer\": \"" << (m.layer ? "double" : "single") << "\", \"first_frame\": " << m.first
                    << ", \"last_frame\": " << m.last << ", \"first_time_s\": " << m.first / fps << ", \"weight\": " << m.weight << ", \"tracks\": [";
                 for (size_t k = 0; k < m.ids.size(); ++k) js << (k ? ", " : "") << m.ids[k];
                 js << "]}" << (i + 1 < merged.size() ? "," : "") << "\n";

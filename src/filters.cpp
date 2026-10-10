@@ -55,7 +55,10 @@ bool strict_plate_format(const std::string& s, int max_letters) {
     if (ch.size() == 8) {
         // 小型新能源: 第 3 位 D/F 等 + 1 位字母数字 + 4 位数字；大型: 5 位数字 + D/F 等
         bool small = nev(ch[2]) && is_alnum(ch[3]) && is_digit(ch[4]) && is_digit(ch[5]) && is_digit(ch[6]) && is_digit(ch[7]);
-        bool large = is_digit(ch[2]) && is_digit(ch[3]) && is_digit(ch[4]) && is_digit(ch[5]) && is_digit(ch[6]) && nev(ch[7]);
+        // 大型（v2.3）: 省份 + 发牌字母 + 5 位数字/字母 + 末位动力类型字母
+        int lt = 0; bool large = nev(ch[7]);
+        for (int i = 2; i <= 6 && large; ++i) { if (!is_alnum(ch[i])) large = false; lt += is_letter(ch[i]); }
+        large = large && lt <= max_letters;
         return small || large;
     }
     // 7 位普通牌
@@ -251,4 +254,14 @@ std::vector<cv::Rect2f> parse_regions(const std::string& s, int W, int H) {
     return out;
 }
 
+}  // namespace pfd
+
+namespace pfd {
+// v2.3: 大型新能源（黄绿牌）判定：8 位且格式合法、末位为动力类型字母；小型新能源（第 3 位为字母、末位数字）不算
+bool is_large_ne_plate(const std::string& s, const std::string& letters, int max_letters) {
+    auto ch = utf8_chars(s);
+    if (ch.size() != 8 || !strict_plate_format(s, max_letters)) return false;
+    const std::string& last = ch[7];
+    return last.size() == 1 && letters.find(last[0]) != std::string::npos;
+}
 }  // namespace pfd

@@ -4,6 +4,7 @@
 #include <cstdio>
 #include <opencv2/imgproc.hpp>
 #include "timer.h"
+#include "filters.h"
 
 namespace pfd {
 
@@ -16,11 +17,11 @@ static const char* kTokens[] = {
 static const int kNumTokens = sizeof(kTokens) / sizeof(kTokens[0]);
 
 const char* plate_color_cn(int c) {
-    static const char* n[] = {"蓝", "黄", "绿", "白", "黑"};
+    static const char* n[] = {"蓝", "黄", "绿", "白", "黑", "黄绿"};
     return (c >= 0 && c < PC_NUM) ? n[c] : "未知";
 }
 const char* plate_color_en(int c) {
-    static const char* n[] = {"blue", "yellow", "green", "white", "black"};
+    static const char* n[] = {"blue", "yellow", "green", "white", "black", "yellowgreen"};
     return (c >= 0 && c < PC_NUM) ? n[c] : "unknown";
 }
 
@@ -199,17 +200,42 @@ PlateRecResult PlateRecognizer::recognize(const cv::Mat& frame, const std::vecto
     const std::string& s = r.text;
     auto has = [&](const char* k) { return s.find(k) != std::string::npos; };
     int n = utf8_len(s);
-    if (s.rfind("WJ", 0) == 0 || has("警")) { r.color = PC_WHITE; r.color_conf = 0.9f; }
-    else if (has("港") || has("澳") || has("使") || has("领") || s.rfind("粤Z", 0) == 0) { r.color = PC_BLACK; r.color_conf = 0.9f; }
-    else if (has("学") || has("挂")) { r.color = PC_YELLOW; r.color_conf = 0.9f; }
-    else if (n == 8 && r.valid_format) { r.color = PC_GREEN; r.color_conf = 0.9f; }
+    if (s.rfind("WJ", 0) == 0 || has("警")) { r.color = PC_WHITE; r.color_conf = 0.9f; r.color_src = "rule"; }
+    else if (has("港") || has("澳") || has("使") || has("领") || s.rfind("粤Z", 0) == 0) { r.color = PC_BLACK; r.color_conf = 0.9f; r.color_src = "rule"; }
+    else if (has("学") || has("挂")) { r.color = PC_YELLOW; r.color_conf = 0.9f; r.color_src = "rule"; }
+    else if (n == 8 && r.valid_format) {
+        // 8 位新能源：默认绿；v2.3 黄绿规则需要分类颜色，故先跑分类
+        if (cfg.yellowgreen_rule) {
+            if (r.pre_color != PC_UNKNOWN) r.cls_color = r.pre_color;
+            else { float cc; classify_color(r.rectified, r.cls_color, cc); }
+        }
+        r.color = PC_GREEN; r.color_conf = 0.9f; r.color_src = "rule";
+    }
     else if (r.pre_color != PC_UNKNOWN) { r.color = r.pre_color; r.color_conf = pre_conf; }   // 已分类过，复用
     else classify_color(r.rectified, r.color, r.color_conf);
+    if (r.cls_color == PC_UNKNOWN && std::string(r.color_src) == "cls") r.cls_color = r.color;   // 规则色（白/黑/黄）时 cls_color 留空
+    if (cfg.yellowgreen_rule && n == 8) {
+        int c2 = resolve_plate_color(s, r.color, r.cls_color, cfg);
+        if (c2 == PC_YELLOWGREEN) { r.color = PC_YELLOWGREEN; r.color_conf = 0.9f; r.color_src = "rule"; }
+    }
     tcls += tc2.lap();
     (void)tm;
     if (t_rec) *t_rec = trec;
     if (t_cls) *t_cls = tcls;
     return r;
+}
+
+int resolve_plate_color(const std::string& text, int color, int cls_color, const PlateRecConfig& cfg, const char** src) {
+    if (src) *src = "cls";
+    if (!cfg.yellowgreen_rule) return color == PC_YELLOWGREEN ? PC_GREEN : color;
+    bool large = is_large_ne_plate(text, cfg.yellowgreen_letters, cfg.max_serial_letters);
+    if (large) {
+        bool ok = std::find(cfg.yellowgreen_colors.begin(), cfg.yellowgreen_colors.end(), cls_color) != cfg.yellowgreen_colors.end();
+        if (ok) { if (src) *src = "rule"; return PC_YELLOWGREEN; }
+        return color == PC_YELLOWGREEN ? PC_GREEN : color;
+    }
+    if (color == PC_YELLOWGREEN) { if (src) *src = "rule"; return PC_GREEN; }   // 号码不是大型新能源 -> 退回绿
+    return color;
 }
 
 }  // namespace pfd

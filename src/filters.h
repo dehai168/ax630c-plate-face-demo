@@ -13,6 +13,8 @@ namespace pfd {
 // 新能源 8 位: 省 + 字母 + ([DABCEFGHJK][字母数字][数字x4] | [数字x5][DABCEFGHJK])
 // 武警 WJ + ...(7~8 位)
 bool strict_plate_format(const std::string& utf8, int max_serial_letters = 3);
+// v2.3: 大型新能源号码（8 位，末位动力类型字母 letters 之一）
+bool is_large_ne_plate(const std::string& utf8, const std::string& letters = "ABCDEFGHJK", int max_serial_letters = 3);
 std::vector<std::string> utf8_chars(const std::string& s);
 int utf8_edit_distance(const std::string& a, const std::string& b);
 

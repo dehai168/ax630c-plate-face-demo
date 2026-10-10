@@ -15,7 +15,7 @@
 using namespace pfd;
 static const std::vector<float> kAnchors = {4, 5, 8, 10, 13, 16, 23, 29, 43, 55, 73, 105, 146, 217, 231, 300, 335, 433};
 static cv::Scalar color_bgr(int c) {
-    switch (c) { case PC_BLUE: return {200, 80, 0}; case PC_YELLOW: return {0, 200, 255}; case PC_GREEN: return {60, 200, 60};
+    switch (c) { case PC_BLUE: return {200, 80, 0}; case PC_YELLOW: return {0, 200, 255}; case PC_GREEN: return {60, 200, 60}; case PC_YELLOWGREEN: return {40, 220, 170};
         case PC_WHITE: return {235, 235, 235}; case PC_BLACK: return {30, 30, 30}; default: return {128, 128, 128}; }
 }
 int main(int argc, char** argv) {
@@ -27,6 +27,7 @@ int main(int argc, char** argv) {
     YoloKpDetector face_det(5, 1, kAnchors); face_det.pad_value = 114;
     YoloKpDetector plate_det(4, 2, kAnchors); plate_det.pad_value = 0;
     PlateRecognizer rec;
+    if (getenv("YELLOWGREEN_RULE") && atoi(getenv("YELLOWGREEN_RULE")) == 0) rec.cfg.yellowgreen_rule = false;   // v2.3 对比用
     if (getenv("LAYER_BY_COLOR") && atoi(getenv("LAYER_BY_COLOR")) == 0) rec.cfg.layer_by_color = false;   // v2.1 对比用
     if (!face_det.load(argv[3], det_norm) || !plate_det.load(argv[4], det_norm) || !rec.load(argv[5], argv[6])) { fprintf(stderr, "load fail\n"); return 3; }
     FILE* fl = fopen(list.c_str(), "r");
@@ -61,7 +62,8 @@ int main(int argc, char** argv) {
             printf("PLATE\t%zu\t%s\t%d\t%.4f\t%s\t%.4f\t%s\t%.4f\t%d\t%.0f,%.0f,%.0f,%.0f\t%d\n", i, r.text.c_str(), d.cls, d.score,
                    r.color >= 0 ? plate_color_cn(r.color) : "", r.color_conf, r.text.empty() ? "" : "x", r.conf, r.valid_format ? 1 : 0,
                    d.box.x, d.box.y, d.box.width, d.box.height, small[i]);
-            printf("LAYER\t%zu\t%d\t%d\t%d\t%s\n", i, d.cls, r.layer, r.layer_overridden ? 1 : 0, r.pre_color >= 0 ? plate_color_cn(r.pre_color) : "-");
+            printf("LAYER\t%zu\t%d\t%d\t%d\t%s\t%s\t%s\n", i, d.cls, r.layer, r.layer_overridden ? 1 : 0, r.pre_color >= 0 ? plate_color_cn(r.pre_color) : "-",
+                   r.cls_color >= 0 ? plate_color_cn(r.cls_color) : "-", r.color_src);
             std::vector<cv::Point> poly; for (auto& p : d.kps) poly.emplace_back((int)p.x, (int)p.y);
             cv::rectangle(img, d.box, cv::Scalar(255, 160, 0), std::max(1, H / 600));
             cv::polylines(img, poly, true, cv::Scalar(0, 255, 255), std::max(2, H / 400));
@@ -69,7 +71,7 @@ int main(int argc, char** argv) {
             std::string label = std::string(head) + (r.text.empty() ? "?" : r.text) + (r.valid_format ? "" : "?") + " " + (r.color >= 0 ? plate_color_cn(r.color) : "");
             char c2[32]; snprintf(c2, sizeof(c2), " rec%.2f", r.conf); label += c2;
             cv::Scalar bg = color_bgr(r.color);
-            cv::Scalar fg = (r.color == PC_WHITE || r.color == PC_YELLOW) ? cv::Scalar(0, 0, 0) : cv::Scalar(255, 255, 255);
+            cv::Scalar fg = (r.color == PC_WHITE || r.color == PC_YELLOW || r.color == PC_YELLOWGREEN) ? cv::Scalar(0, 0, 0) : cv::Scalar(255, 255, 255);
             int th = std::max(22, H / 30);
             int y = (int)d.box.y - th - 8; if (y < 0) y = std::min(H - th - 4, (int)(d.box.y + d.box.height + 4));
             int x = std::min(std::max(0, (int)d.box.x), std::max(0, img.cols - text_size(label, th).width - 6));

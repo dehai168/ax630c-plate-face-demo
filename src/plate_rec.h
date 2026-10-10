@@ -8,7 +8,7 @@
 
 namespace pfd {
 
-enum PlateColor { PC_UNKNOWN = -1, PC_BLUE = 0, PC_YELLOW, PC_GREEN, PC_WHITE, PC_BLACK, PC_NUM };
+enum PlateColor { PC_UNKNOWN = -1, PC_BLUE = 0, PC_YELLOW, PC_GREEN, PC_WHITE, PC_BLACK, PC_YELLOWGREEN, PC_NUM };   // 黄绿 = 大型新能源（规则判定）
 const char* plate_color_cn(int c);   // "蓝" ...
 const char* plate_color_en(int c);   // "blue" ...
 
@@ -17,6 +17,8 @@ struct PlateRecResult {
     float conf = 0.f;        // 字符平均置信度
     int color = PC_UNKNOWN;
     float color_conf = 0.f;
+    int cls_color = PC_UNKNOWN;   // v2.3: 颜色分类网络（含 HSV 兜底）的结果
+    const char* color_src = "cls";   // cls = 分类网络/HSV；rule = 由号码规则决定
     bool valid_format = false;
     cv::Mat rectified;       // 拉正后的车牌小图（双层牌为拼接前）
     int det_layer = 0;       // 检测器给出的层数（0 单 1 双）
@@ -34,6 +36,11 @@ struct PlateRecConfig {
     std::vector<int> double_colors = {PC_YELLOW};   // 允许双层的颜色（默认只有黄牌）
     bool layer_fallback = true;  // 被改成单层后识别结果格式不合法、且判层颜色置信度低于 layer_fallback_conf 时，再按双层试一次，取合法者
     float layer_fallback_conf = 0.7f;
+    // v2.3: 黄绿（大型新能源）规则：8 位合法、末位为 yellowgreen_letters 之一、且分类颜色在 yellowgreen_colors 内 -> 黄绿
+    bool yellowgreen_rule = true;
+    std::string yellowgreen_letters = "ABCDEFGHJK";
+    std::vector<int> yellowgreen_colors = {PC_GREEN, PC_YELLOW};
+    int max_serial_letters = 3;
 };
 
 class PlateRecognizer {
@@ -58,5 +65,8 @@ private:
 };
 
 int utf8_len(const std::string& s);
+// v2.3: 由最终号码 + 颜色得到最终颜色（黄绿规则）；src 输出 rule/cls
+// color: 当前（投票）颜色；cls_color: 分类网络颜色（投票）。大型新能源号码且 cls_color 在 yellowgreen_colors 内 -> 黄绿
+int resolve_plate_color(const std::string& text, int color, int cls_color, const PlateRecConfig& cfg, const char** src = nullptr);
 
 }  // namespace pfd
