@@ -33,6 +33,9 @@ int main(int argc, char** argv) {
     PlateRecognizer rec;
     if (getenv("YELLOWGREEN_RULE") && atoi(getenv("YELLOWGREEN_RULE")) == 0) rec.cfg.yellowgreen_rule = false;   // v2.3 对比用
     if (getenv("LAYER_BY_COLOR") && atoi(getenv("LAYER_BY_COLOR")) == 0) rec.cfg.layer_by_color = false;   // v2.1 对比用
+    if (getenv("DUAL_HYP")) rec.cfg.dual_hyp = atoi(getenv("DUAL_HYP")) != 0;   // v2.4 对比用
+    if (getenv("DUAL_FROM_SINGLE")) rec.cfg.dual_hyp_from_single = atoi(getenv("DUAL_FROM_SINGLE")) != 0;
+    if (getenv("DUAL_CONF")) rec.cfg.dual_hyp_conf = (float)atof(getenv("DUAL_CONF"));
     if (!face_det.load(argv[3], det_norm) || !plate_det.load(argv[4], det_norm) || !rec.load(argv[5], argv[6])) { fprintf(stderr, "load fail\n"); return 3; }
     FILE* fl = fopen(list.c_str(), "r");
     char line[4096];
@@ -84,6 +87,7 @@ int main(int argc, char** argv) {
                    d.box.x, d.box.y, d.box.width, d.box.height, small[i]);
             printf("LAYER\t%zu\t%d\t%d\t%d\t%s\t%s\t%s\t%d\n", i, d.cls, r.layer, r.layer_overridden ? 1 : 0, r.pre_color >= 0 ? plate_color_cn(r.pre_color) : "-",
                    r.cls_color >= 0 ? plate_color_cn(r.cls_color) : "-", r.color_src, strict_plate_format(r.text, 3) ? 1 : 0);
+            printf("KPS\t%zu\t", i); for (size_t j = 0; j < d.kps.size(); ++j) printf("%s%.1f,%.1f", j ? ";" : "", d.kps[j].x, d.kps[j].y); printf("\n");
             std::vector<cv::Point> poly; for (auto& p : d.kps) poly.emplace_back((int)p.x, (int)p.y);
             cv::rectangle(img, d.box, cv::Scalar(255, 160, 0), std::max(1, H / 600));
             cv::polylines(img, poly, true, cv::Scalar(0, 255, 255), std::max(2, H / 400));

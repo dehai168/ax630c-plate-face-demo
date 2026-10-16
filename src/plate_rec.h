@@ -23,6 +23,8 @@ struct PlateRecResult {
     cv::Mat rectified;       // 拉正后的车牌小图（双层牌为拼接前）
     int det_layer = 0;       // 检测器给出的层数（0 单 1 双）
     int layer = 0;           // 实际采用的层数（按颜色规则修正后）
+    bool dual_tried = false;        // v2.4: 做了双假设识别
+    bool dual_switched = false;     // v2.4: 双假设改变了层数
     bool layer_overridden = false;  // 检测器判双层、但颜色不允许双层 -> 按单层识别
     int pre_color = PC_UNKNOWN;     // 判层用的颜色（识别前在拉正图上分类）
 };
@@ -41,6 +43,12 @@ struct PlateRecConfig {
     std::string yellowgreen_letters = "ABCDEFGHJK";
     std::vector<int> yellowgreen_colors = {PC_GREEN, PC_YELLOW};
     int max_serial_letters = 3;
+    // v2.4: 单/双层双假设识别。不确定时按单层、双层各识别一次，按格式合法性 + 置信度择优。
+    // 双层假设仍只对 double_colors（默认黄牌）开放（识别前的判层颜色为黄，或颜色未判且检测器说双层）。
+    bool dual_hyp = true;
+    float dual_hyp_conf = 0.95f;     // 当前假设的结果已“严格合法且置信度 >= 此值”则不再试另一种（省一次推理）
+    float dual_hyp_margin = 0.05f;   // 两种假设都合法时，另一假设置信度须高出此值才取代当前
+    bool dual_hyp_from_single = true;// 检测器判单层、结果不合法、拉正图分类为允许双层的颜色 -> 也试双层
 };
 
 class PlateRecognizer {

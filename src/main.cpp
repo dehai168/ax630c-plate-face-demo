@@ -43,6 +43,7 @@ struct Args {
     std::string double_layer_colors = "yellow";   // v2.1: 允许双层的颜色，逗号分隔；all = 不按颜色修正
     bool layer_fallback = true;
     float layer_fallback_conf = 0.7f;
+    bool dual_hyp = true; float dual_hyp_conf = 0.95f, dual_hyp_margin = 0.05f; bool dual_hyp_from_single = true;   // v2.4
     // v2.2: ROI 放大二次检测（低分候选附近裁一块放大再检一次，救小/远/模糊车牌）
     int roi_max = 1;              // 每帧最多几个 ROI（0 关闭）
     float roi_seed_thr = 0.12f;   // 候选分数下限（上限为 plate_new_thr）
@@ -76,7 +77,7 @@ static void usage(const char* p) {
            "  通用: --max_frames N --start_frame N --track_lost <帧,默认=fps> --min_hits 3 --quiet --dump dets.txt --result_json r.json\n"
            "  车牌检测/跟踪: --plate_thr 0.35(跟踪高分阈值) --plate_new_thr 0.45(新建轨迹) --plate_buffer 0.4(BIoU 外扩) --nms 0.45\n"
            "        --plate_display_hits 2 --plate_show_score 0.5 --rec_max 20 --double_mode merge|separate --expand_x 0.02 --expand_y 0.04\n"
-           "        --double_layer_colors yellow(允许双层的颜色, 逗号分隔 blue/yellow/green/white/black, all=不修正) --layer_fallback 1 --layer_fallback_conf 0.7\n"
+           "        --double_layer_colors yellow(允许双层的颜色, 逗号分隔 blue/yellow/green/white/black, all=不修正) --layer_fallback 1 --layer_fallback_conf 0.7\n        --dual_hyp 1(单/双层双假设识别) --dual_hyp_conf 0.95 --dual_hyp_margin 0.05 --dual_hyp_from_single 1\n"
            "  ROI 二次检测: --roi_max 1(每帧最多 ROI 数, 0 关闭) --roi_seed_thr 0.12 --roi_min_w 60 --roi_zoom 2 --rec_count_min_w 80\n"
            "  黄绿: --yellowgreen_rule 1 --yellowgreen_letters ABCDEFGHJK --yellowgreen_colors green,yellow (8 位合法+末位动力字母+分类色在列表内 -> 黄绿)\n"
            "  车牌过滤: --plate_geom 1(四角点几何) --strict_format 1 --max_serial_letters 3 --rec_min_conf 0.7\n"
@@ -127,6 +128,10 @@ static bool parse_kv(const std::string& k0, const std::function<std::string()>& 
     else if (k == "double_layer_colors") a.double_layer_colors = next();
     else if (k == "layer_fallback") B(a.layer_fallback);
     else if (k == "layer_fallback_conf") F(a.layer_fallback_conf);
+    else if (k == "dual_hyp") B(a.dual_hyp);
+    else if (k == "dual_hyp_conf") F(a.dual_hyp_conf);
+    else if (k == "dual_hyp_margin") F(a.dual_hyp_margin);
+    else if (k == "dual_hyp_from_single") B(a.dual_hyp_from_single);
     else if (k == "roi_max") I(a.roi_max);
     else if (k == "roi_seed_thr") F(a.roi_seed_thr);
     else if (k == "roi_min_w") F(a.roi_min_w);
@@ -438,6 +443,8 @@ int main(int argc, char** argv) {
             plate_rec.cfg.double_merge = a.double_merge;
             plate_rec.cfg.layer_fallback = a.layer_fallback;
             plate_rec.cfg.layer_fallback_conf = a.layer_fallback_conf;
+            plate_rec.cfg.dual_hyp = a.dual_hyp; plate_rec.cfg.dual_hyp_conf = a.dual_hyp_conf;
+            plate_rec.cfg.dual_hyp_margin = a.dual_hyp_margin; plate_rec.cfg.dual_hyp_from_single = a.dual_hyp_from_single;
             plate_rec.cfg.yellowgreen_rule = a.yellowgreen_rule;
             plate_rec.cfg.yellowgreen_letters = a.yellowgreen_letters;
             plate_rec.cfg.max_serial_letters = a.max_serial_letters;

@@ -193,6 +193,35 @@ PlateRecResult PlateRecognizer::recognize(const cv::Mat& frame, const std::vecto
         auto o2 = rec_layer(r.rectified, 1);
         if (check_format(o2.first)) { r.text = o2.first; r.conf = o2.second; r.valid_format = true; r.layer = 1; r.layer_overridden = false; }
     }
+    // ---- v2.4: 单/双层双假设：当前假设结果不够可信时，再按另一种层数识别，择优 ----
+    if (cfg.dual_hyp) {
+        auto fmt_score = [&](const std::string& t) { return strict_plate_format(t, cfg.max_serial_letters) ? 2 : (check_format(t) ? 1 : 0); };
+        auto is_dbl_color = [&](int c) { return std::find(cfg.double_colors.begin(), cfg.double_colors.end(), c) != cfg.double_colors.end(); };
+        int cur_fs = fmt_score(r.text);
+        bool confident = cur_fs == 2 && r.conf >= cfg.dual_hyp_conf;
+        if (!confident) {
+            int other = -1;
+            if (r.layer == 1) other = 0;                       // 当前双层 -> 试单层（任何颜色都允许单层）
+            else if (cfg.dual_hyp_from_single && r.layer == 0) {
+                // 当前单层（检测器判单层，或判双层但被颜色改成单层）-> 试双层，须判层颜色允许双层
+                if (!cfg.layer_by_color) other = 1;
+                else {
+                    if (r.pre_color == PC_UNKNOWN) { Timer tc; classify_color(r.rectified, r.pre_color, pre_conf); tcls += tc.lap(); }
+                    if (is_dbl_color(r.pre_color)) other = 1;
+                }
+            }
+            if (other >= 0) {
+                auto o2 = rec_layer(r.rectified, other);
+                int fs2 = fmt_score(o2.first);
+                bool take = fs2 > cur_fs || (fs2 == cur_fs && fs2 > 0 && o2.second > r.conf + cfg.dual_hyp_margin);
+                r.dual_tried = true;
+                if (take) {
+                    r.text = o2.first; r.conf = o2.second; r.valid_format = check_format(r.text);
+                    r.dual_switched = true; r.layer = other; r.layer_overridden = (other == 0 && layer == 1);
+                }
+            }
+        }
+    }
     double trec = trc.lap();
 
     // ---- 颜色: 规则(字符) > 分类网络(蓝/绿/黄) > HSV 兜底(白/黑) ----
