@@ -1,4 +1,6 @@
-# AX630C 人脸 + 车牌 全流程 Demo（板端运行包）
+# AX630C 人脸 + 车牌 全流程 Demo（板端运行包 v2.4）
+
+v2.4：默认 PFD_VNPU=1 和 /usr/local/lib；npu1 默认使用 U16 车牌检测模型 models/plate_det_npu1_u16.axmodel；单/双层双假设识别（demo.cfg dual_hyp）。改动与评测数字见 CHANGELOG.md，文件校验见 SHA256SUMS。`./plate_face_demo --version` 查看版本。
 
 完整说明（编译、模型、license、已知限制）见源码包里的 README.md。
 
@@ -16,7 +18,8 @@ third_party_licenses/  第三方组件声明（FFmpeg LGPL 等）
 
 ## 运行
 ```sh
-tar xzf ax630c_plate_face_demo_board.tar.gz && cd ax630c_plate_face_demo_board
+tar xzf ax630c_plate_face_demo_v2.4_board.tar.gz && cd ax630c_plate_face_demo_board
+sha256sum -c SHA256SUMS                            # 可选：校验
 ./video_io_selftest test_video.mp4 /tmp/t.mp4     # 可选：先确认视频读写 OK
 ./run.sh                                           # test_video.mp4 -> out.mp4，最佳帧在 snaps/
 ./run.sh my.mp4 my_out.mp4                         # 自己的视频

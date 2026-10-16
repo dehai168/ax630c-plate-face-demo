@@ -1,4 +1,4 @@
-// plate_face_demo v2: 车牌 + 人脸 全流程离线测试 demo（AX630C / x86 ONNX Runtime 共用）
+// plate_face_demo v2.4: 车牌 + 人脸 全流程离线测试 demo（AX630C / x86 ONNX Runtime 共用）
 // v2: OSD 自学习屏蔽、车牌几何/格式/时序过滤、人脸五点几何过滤、BIoU 跟踪、同牌轨迹合并、配置文件
 // 读视频 -> 人脸检测(5点) + 车牌检测(4角点+单/双层) -> ByteTrack(各自独立) -> 车牌拉正/识别/颜色
 // -> 每个 track 维护 best-shot + 多帧投票 -> 叠加输出视频；可选保存 best-shot 大图/小图 + JSON
@@ -21,6 +21,7 @@
 #include "bytetrack.h"
 #include "detector.h"
 #include "filters.h"
+#include "version.h"
 #include "plate_rec.h"
 #include "text_render.h"
 #include "timer.h"
@@ -72,6 +73,7 @@ struct Args {
 };
 
 static void usage(const char* p) {
+    printf("plate_face_demo %s\n", PFD_VERSION);
     printf("用法: %s -i in.mp4 -o out.mp4 --face face.axmodel --plate plate_det.axmodel --rec plate_rec.axmodel\n"
            "          [--color plate_cls.axmodel] [--snap_dir snaps/] [--config demo.cfg]\n"
            "  通用: --max_frames N --start_frame N --track_lost <帧,默认=fps> --min_hits 3 --quiet --dump dets.txt --result_json r.json\n"
@@ -195,6 +197,7 @@ static bool parse(int argc, char** argv, Args& a) {
         std::string k = argv[i];
         auto next = [&]() -> std::string { if (i + 1 >= argc) { fprintf(stderr, "missing value for %s\n", k.c_str()); exit(1); } return argv[++i]; };
         if (k == "-h" || k == "--help") { usage(argv[0]); exit(0); }
+        if (k == "--version") { printf("plate_face_demo %s\n", PFD_VERSION); exit(0); }
         if (k == "--config") { if (!load_config(next(), a)) return false; continue; }
         if (!parse_kv(k, next, a)) { fprintf(stderr, "unknown arg %s\n", k.c_str()); usage(argv[0]); return false; }
     }
@@ -835,7 +838,7 @@ int main(int argc, char** argv) {
                 std::vector<std::string> lines;
                 char b[200];
                 snprintf(b, sizeof(b), "frame %d  algo %.1f ms  FPS(algo) %.1f  FPS(e2e) %.1f  %s", fidx, algo_ms, 1000.0 / std::max(avg, 1e-3),
-                         last.count("frame_total") ? 1000.0 / std::max(last["frame_total"], 1e-3) : 0.0, a.legacy ? "v1" : "v2");
+                         last.count("frame_total") ? 1000.0 / std::max(last["frame_total"], 1e-3) : 0.0, a.legacy ? "v1" : PFD_VERSION);
                 lines.push_back(b);
                 if (face_det) { snprintf(b, sizeof(b), "face det  pre %.1f infer %.1f post %.1f ms  n=%d shown=%d", g("face_pre"), g("face_infer"), g("face_post"), (int)fd.size(), n_face_shown); lines.push_back(b); }
                 if (plate_det) {

@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 OUTDIR=${OUTDIR:-$(dirname "$ROOT")}
 NAME=ax630c_plate_face_demo
+VER=$(sed -n 's/.*PFD_VERSION "\(.*\)"/\1/p' "$ROOT/src/version.h")
 STAGE=$ROOT/build/stage/${NAME}_board
 rm -rf "$STAGE"; mkdir -p "$STAGE/lib" "$STAGE/models" "$STAGE/lib_sdk_fallback"
 cp "$ROOT/build/aarch64/plate_face_demo.stripped" "$STAGE/plate_face_demo"
@@ -22,10 +23,14 @@ cp "$ROOT/board/run.sh" "$ROOT/board/demo.cfg" "$STAGE/"
 cp "$ROOT/test_data/test_video.mp4" "$STAGE/" 2>/dev/null || true
 cp "$ROOT/board/README_board.md" "$STAGE/README.md"
 cp -r "$ROOT/third_party_licenses" "$STAGE/"
-tar -C "$(dirname "$STAGE")" -czf "$OUTDIR/${NAME}_board.tar.gz" "$(basename "$STAGE")"
-echo "board package: $OUTDIR/${NAME}_board.tar.gz"
+cp "$ROOT/CHANGELOG.md" "$STAGE/"
+echo "$VER" > "$STAGE/VERSION"
+(cd "$STAGE" && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS)
+tar -C "$(dirname "$STAGE")" -czf "$OUTDIR/${NAME}_${VER}_board.tar.gz" "$(basename "$STAGE")"
+echo "board package: $OUTDIR/${NAME}_${VER}_board.tar.gz"
 # 源码包（不含 build/ 3rdparty/ 大文件结果视频）
-tar -C "$(dirname "$ROOT")" -czf "$OUTDIR/${NAME}_src.tar.gz" \
+tar -C "$(dirname "$ROOT")" -czf "$OUTDIR/${NAME}_${VER}_src.tar.gz" \
   --exclude="$NAME/build" --exclude="$NAME/3rdparty" --exclude="$NAME/results/*/*.mp4" --exclude="$NAME/results/*/snaps" \
   --exclude="__pycache__" "$NAME"
-echo "source package: $OUTDIR/${NAME}_src.tar.gz"
+echo "source package: $OUTDIR/${NAME}_${VER}_src.tar.gz"
+(cd "$OUTDIR" && sha256sum ${NAME}_${VER}_board.tar.gz ${NAME}_${VER}_src.tar.gz > ${NAME}_${VER}_SHA256SUMS.txt)
