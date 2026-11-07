@@ -1,0 +1,121 @@
+{
+  "baseline_transplant": {
+    "n": 489,
+    "correct": 321,
+    "accuracy": 0.656441717791411,
+    "per_class": {
+      "黑": {
+        "n": 93,
+        "correct": 75,
+        "accuracy": 0.8064516129032258
+      },
+      "白": {
+        "n": 142,
+        "correct": 131,
+        "accuracy": 0.9225352112676056
+      },
+      "蓝": {
+        "n": 103,
+        "correct": 59,
+        "accuracy": 0.5728155339805825
+      },
+      "黄": {
+        "n": 51,
+        "correct": 30,
+        "accuracy": 0.5882352941176471
+      },
+      "绿": {
+        "n": 100,
+        "correct": 26,
+        "accuracy": 0.26
+      }
+    },
+    "ordinary_combined": 0.45121951219512196,
+    "police_embassy_combined": 0.8744588744588745
+  },
+  "baseline_transplant_su": {
+    "n": 110,
+    "correct": 67,
+    "accuracy": 0.6090909090909091,
+    "per_class": {
+      "黄": {
+        "n": 22,
+        "correct": 8,
+        "accuracy": 0.36363636363636365
+      },
+      "蓝": {
+        "n": 84,
+        "correct": 58,
+        "accuracy": 0.6904761904761905
+      },
+      "绿": {
+        "n": 4,
+        "correct": 1,
+        "accuracy": 0.25
+      }
+    },
+    "ordinary_combined": 0.6090909090909091,
+    "police_embassy_combined": 0.0
+  },
+  "best": {
+    "n": 489,
+    "correct": 467,
+    "accuracy": 0.9550102249488752,
+    "per_class": {
+      "黑": {
+        "n": 93,
+        "correct": 91,
+        "accuracy": 0.978494623655914
+      },
+      "白": {
+        "n": 142,
+        "correct": 139,
+        "accuracy": 0.9788732394366197
+      },
+      "蓝": {
+        "n": 103,
+        "correct": 97,
+        "accuracy": 0.941747572815534
+      },
+      "黄": {
+        "n": 51,
+        "correct": 46,
+        "accuracy": 0.9019607843137255
+      },
+      "绿": {
+        "n": 100,
+        "correct": 94,
+        "accuracy": 0.94
+      }
+    },
+    "ordinary_combined": 0.9349593495934959,
+    "police_embassy_combined": 0.974025974025974
+  },
+  "su_best": {
+    "n": 110,
+    "correct": 106,
+    "accuracy": 0.9636363636363636,
+    "per_class": {
+      "黄": {
+        "n": 22,
+        "correct": 22,
+        "accuracy": 1.0
+      },
+      "蓝": {
+        "n": 84,
+        "correct": 81,
+        "accuracy": 0.9642857142857143
+      },
+      "绿": {
+        "n": 4,
+        "correct": 3,
+        "accuracy": 0.75
+      }
+    },
+    "ordinary_combined": 0.9636363636363636,
+    "police_embassy_combined": 0.0
+  },
+  "best_epoch": 48,
+  "epochs_run": 66,
+  "device": "cuda"
+}
