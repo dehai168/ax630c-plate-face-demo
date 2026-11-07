@@ -4,6 +4,8 @@ v2.4：默认 PFD_VNPU=1 和 /usr/local/lib；npu1 默认使用 U16 车牌检测
 
 完整说明（编译、模型、license、已知限制）见源码包里的 README.md。
 
+本运行包里的识别 / 颜色 axmodel 仍是 v2.4（3 类颜色：蓝/绿/黄）。2026-11-07 的微调识别器与五色 ONNX 只在源码树 `models/onnx/`，还没有量化进这个板端包。上板测试等板子挂上后再做。
+
 ## 目录
 ```
 plate_face_demo        主程序 (aarch64, glibc>=2.29, libstdc++ 已静态链接)

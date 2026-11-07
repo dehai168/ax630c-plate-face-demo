@@ -1,0 +1,139 @@
+{
+  "rec_val_special": {
+    "correct": 450,
+    "n": 489,
+    "accuracy": 0.9202453987730062,
+    "per_class": {
+      "使": {
+        "n": 90,
+        "correct": 87,
+        "accuracy": 0.9666666666666667
+      },
+      "其他": {
+        "n": 3,
+        "correct": 3,
+        "accuracy": 1.0
+      },
+      "学": {
+        "n": 1,
+        "correct": 1,
+        "accuracy": 1.0
+      },
+      "挂": {
+        "n": 5,
+        "correct": 5,
+        "accuracy": 1.0
+      },
+      "新能源": {
+        "n": 94,
+        "correct": 87,
+        "accuracy": 0.925531914893617
+      },
+      "普通": {
+        "n": 152,
+        "correct": 135,
+        "accuracy": 0.8881578947368421
+      },
+      "港澳": {
+        "n": 2,
+        "correct": 2,
+        "accuracy": 1.0
+      },
+      "警": {
+        "n": 141,
+        "correct": 129,
+        "accuracy": 0.9148936170212766
+      },
+      "领": {
+        "n": 1,
+        "correct": 1,
+        "accuracy": 1.0
+      }
+    },
+    "ordinary_combined": 0.9024390243902439,
+    "police_embassy_combined": 0.935064935064935,
+    "ao_target_count": 0,
+    "shi_to_ao": 0,
+    "ao_to_shi": 0
+  },
+  "rec_val_su": {
+    "correct": 99,
+    "n": 111,
+    "accuracy": 0.8918918918918919,
+    "per_class": {
+      "普通": {
+        "n": 106,
+        "correct": 95,
+        "accuracy": 0.8962264150943396
+      },
+      "新能源": {
+        "n": 5,
+        "correct": 4,
+        "accuracy": 0.8
+      }
+    },
+    "ordinary_combined": 0.8918918918918919,
+    "police_embassy_combined": 0.0,
+    "ao_target_count": 0,
+    "shi_to_ao": 0,
+    "ao_to_shi": 0
+  },
+  "color_val_special": {
+    "correct": 431,
+    "n": 489,
+    "accuracy": 0.8813905930470347,
+    "per_class": {
+      "黑": {
+        "n": 93,
+        "correct": 85,
+        "accuracy": 0.9139784946236559
+      },
+      "白": {
+        "n": 142,
+        "correct": 125,
+        "accuracy": 0.8802816901408451
+      },
+      "蓝": {
+        "n": 103,
+        "correct": 94,
+        "accuracy": 0.912621359223301
+      },
+      "黄": {
+        "n": 51,
+        "correct": 40,
+        "accuracy": 0.7843137254901961
+      },
+      "绿": {
+        "n": 100,
+        "correct": 87,
+        "accuracy": 0.87
+      }
+    },
+    "ordinary_combined": 0.8780487804878049,
+    "police_embassy_combined": 0.9004329004329005
+  },
+  "color_val_su": {
+    "correct": 101,
+    "n": 110,
+    "accuracy": 0.9181818181818182,
+    "per_class": {
+      "黄": {
+        "n": 22,
+        "correct": 19,
+        "accuracy": 0.8636363636363636
+      },
+      "蓝": {
+        "n": 84,
+        "correct": 79,
+        "accuracy": 0.9404761904761905
+      },
+      "绿": {
+        "n": 4,
+        "correct": 3,
+        "accuracy": 0.75
+      }
+    },
+    "ordinary_combined": 0.9181818181818182,
+    "police_embassy_combined": 0.0
+  }
+}
