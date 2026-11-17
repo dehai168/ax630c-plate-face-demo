@@ -201,7 +201,7 @@ void PlateRecognizer::classify_color(const cv::Mat& rect, int& color, float& con
         const int CH = cls_->input_h(), CW = cls_->input_w();
         cv::resize(rect, cls_in_, cv::Size(CW, CH));
         std::vector<Tensor> outs;
-        if (cls_->run(cls_in_, outs) && !outs.empty() && outs[0].size() >= 3) {
+        if (cls_->run(cls_in_, outs) && !outs.empty() && outs[0].size() == 3) {
             const float* p = outs[0].data;   // [blue, green, yellow]，已 softmax
             int b = (int)(std::max_element(p, p + 3) - p);
             static const int map3[3] = {PC_BLUE, PC_GREEN, PC_YELLOW};
