@@ -32,7 +32,7 @@ static const std::vector<float> kAnchors = {4, 5, 8, 10, 13, 16, 23, 29, 43, 55,
 
 // ------------------------------------------------------------------ args
 struct Args {
-    std::string in, out, face, plate, rec, color, snap_dir, dump, osd_mask, result_json;
+    std::string in, out, face, plate, rec, color, color5, snap_dir, dump, osd_mask, result_json;
     // 检测/跟踪阈值（v2 默认值；--legacy 恢复 v1 行为）
     float face_thr = 0.45f, face_new_thr = 0.5f, plate_thr = 0.35f, plate_new_thr = 0.45f, nms = 0.45f;
     float plate_buffer = 0.4f, face_buffer = 0.3f;
@@ -75,7 +75,7 @@ struct Args {
 static void usage(const char* p) {
     printf("plate_face_demo %s\n", PFD_VERSION);
     printf("用法: %s -i in.mp4 -o out.mp4 --face face.axmodel --plate plate_det.axmodel --rec plate_rec.axmodel\n"
-           "          [--color plate_cls.axmodel] [--snap_dir snaps/] [--config demo.cfg]\n"
+           "          [--color old3_selection.axmodel] [--color5 optional_display5.axmodel] [--snap_dir snaps/] [--config demo.cfg]\n"
            "  通用: --max_frames N --start_frame N --track_lost <帧,默认=fps> --min_hits 3 --quiet --dump dets.txt --result_json r.json\n"
            "  车牌检测/跟踪: --plate_thr 0.35(跟踪高分阈值) --plate_new_thr 0.45(新建轨迹) --plate_buffer 0.4(BIoU 外扩) --nms 0.45\n"
            "        --plate_display_hits 2 --plate_show_score 0.5 --rec_max 20 --double_mode merge|separate --expand_x 0.02 --expand_y 0.04\n"
@@ -106,6 +106,7 @@ static bool parse_kv(const std::string& k0, const std::function<std::string()>& 
     else if (k == "plate") a.plate = next();
     else if (k == "rec") a.rec = next();
     else if (k == "color") a.color = next();
+    else if (k == "color5") a.color5 = next();
     else if (k == "snap_dir") a.snap_dir = next();
     else if (k == "dump") a.dump = next();
     else if (k == "result_json") a.result_json = next();
@@ -321,6 +322,16 @@ struct PlateInfo {
     bool non_plate(float min_ratio) const { return min_ratio > 0 && rec_count >= 6 && valid_ratio() < min_ratio; }
 };
 
+// Color-only aggregation. Caller still computes text w using unchanged legacy rr.color_conf.
+static void update_plate_color_votes(PlateInfo& pi, const PlateRecResult& rr, float w) {
+    if(rr.color5_enabled){
+        if(rr.raw5.color>=0 && rr.raw5.color<PC_NUM) pi.color_votes[rr.raw5.color]+=rr.raw5.conf*w; // defer text/layer rules to final vote context
+        if(rr.raw5.color>=0 && rr.raw5.color<PC_NUM) pi.cls_votes[rr.raw5.color]+=w;
+    }else{
+        if(rr.color>=0 && rr.color<PC_NUM) pi.color_votes[rr.color]+=rr.color_conf*w;
+        if(rr.cls_color>=0 && rr.cls_color<PC_NUM) pi.cls_votes[rr.cls_color]+=w;
+    }
+}
 static std::string json_escape(const std::string& s) {
     std::string o;
     for (char c : s) { if (c == '"' || c == '\\') o += '\\'; o += c; }
@@ -442,7 +453,7 @@ int main(int argc, char** argv) {
             plate_det.reset(new YoloKpDetector(4, 2, kAnchors));
             plate_det->pad_value = 0;
             if (!plate_det->load(a.plate, det_norm)) { fprintf(stderr, "load plate det model failed\n"); return 3; }
-            if (!plate_rec.load(a.rec, a.color)) { fprintf(stderr, "load plate rec/color model failed\n"); return 3; }
+            if (!plate_rec.load(a.rec, a.color, a.color5)) { fprintf(stderr, "load plate rec/color model failed\n"); return 3; }
             plate_rec.cfg.double_merge = a.double_merge;
             plate_rec.cfg.layer_fallback = a.layer_fallback;
             plate_rec.cfg.layer_fallback_conf = a.layer_fallback_conf;
@@ -750,11 +761,11 @@ int main(int argc, char** argv) {
                 float w = rr.conf * (0.5f + 0.5f * q);
                 if (!a.legacy && rr.color >= 0) w *= 0.5f + 0.5f * rr.color_conf;   // 颜色分类置信度低（不像车牌底色）降权
                 if (fmt && rr.conf > a.rec_min_conf) { pi.votes[rr.text] += w; pi.rec_valid++; }
-                if (rr.color >= 0) pi.color_votes[rr.color] += rr.color_conf * w;
-                if (rr.cls_color >= 0) pi.cls_votes[rr.cls_color] += w;
+                update_plate_color_votes(pi, rr, w);
+                if(rr.color5_enabled && std::string(rr.raw5.status)!="ok") cnt["plate_color5_invalid"]++;
                 if (fmt && rr.conf > pi.best_rec_conf) { pi.best_rec_conf = rr.conf; pi.best_rect = rr.rectified.clone(); }
                 if (!a.legacy) assign_disp_id(pi, fidx);
-                pi.final_col = resolve_plate_color(pi.text(), pi.color(), pi.cls_color(), plate_rec.cfg, &pi.col_src);
+                pi.final_col = a.color5.empty() ? resolve_plate_color(pi.text(), pi.color(), pi.cls_color(), plate_rec.cfg, &pi.col_src) : resolve_plate_color5(pi.text(), pi.color(), pi.cls_color(), pi.layer(), plate_rec.cfg, &pi.col_src);
                 if (std::string(pi.col_src) != "rule" && utf8_len(pi.text()) == 8 && pi.final_col == PC_GREEN) pi.col_src = "rule";
                 if (!(fmt && rr.conf > a.rec_min_conf) && d.box.width < a.rec_count_min_w && pi.free_recs < a.rec_max) { pi.free_recs++; pi.rec_count--; }
             }
@@ -898,7 +909,7 @@ int main(int argc, char** argv) {
         for (auto& s : plate_summary) printf("  %s\n", s.c_str());
         auto merged = merge_plates(plate_results, merge_gap);
         std::vector<std::string> merged_src;
-        for (auto& m : merged) { const char* src = "cls"; m.color = resolve_plate_color(m.text, m.color, m.cls_color, plate_rec.cfg, &src); if (utf8_len(m.text) == 8 && m.color == PC_GREEN) src = "rule"; merged_src.push_back(src); }   // v2.3: 合并后按最终号码再定颜色
+        for (auto& m : merged) { const char* src = "cls"; m.color = a.color5.empty() ? resolve_plate_color(m.text, m.color, m.cls_color, plate_rec.cfg, &src) : resolve_plate_color5(m.text, m.color, m.cls_color, m.layer, plate_rec.cfg, &src); if (utf8_len(m.text) == 8 && m.color == PC_GREEN) src = "rule"; merged_src.push_back(src); }   // v2.3: 合并后按最终号码再定颜色
         printf("plate results merged (同牌、间隔<=%.1fs 合并): %zu\n", a.merge_gap_s, merged.size());
         for (auto& m : merged) {
             std::string idl; for (int i : m.ids) idl += (idl.empty() ? "" : ",") + std::to_string(i);

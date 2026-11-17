@@ -2,11 +2,52 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <regex>
 #include <opencv2/imgproc.hpp>
 #include "timer.h"
 #include "filters.h"
 
 namespace pfd {
+#include "approved_special_format.inc"
+namespace crop_policy {
+#include "color5_crop_policy.inc"
+}
+Color5Decision decode_color5_probabilities(const std::vector<Tensor>& outs) {
+    Color5Decision r;
+    if (outs.size() != 1) { r.status="output_count"; return r; }
+    const Tensor& t=outs[0]; size_t n=1;
+    if(t.shape.empty()) {r.status="shape";return r;}
+    for(int d:t.shape) {if(d<=0 || n>5/(size_t)d){r.status="shape";return r;} n*=d;}
+    if(n!=5 || !t.data){r.status="shape_or_null";return r;}
+    float sum=0;int best=0;
+    for(int k=0;k<5;++k){float p=t.data[k];if(!std::isfinite(p)||p < -1e-6f || p>1.f+1e-6f){r.status="invalid_probability";return r;}sum+=p;if(p>t.data[best])best=k;}
+    if(std::abs(sum-1.f)>1e-3f){r.status="probability_sum";return r;}
+    static const int map5[5]={PC_BLUE,PC_YELLOW,PC_GREEN,PC_WHITE,PC_BLACK};
+    r.color=map5[best];r.conf=std::max(0.f,std::min(1.f,t.data[best]));r.status="ok";return r;
+}
+bool prepare_color5_input(const cv::Mat& rect, cv::Mat& out) {
+    if(rect.empty() || rect.type()!=CV_8UC3){out.release();return false;}
+    cv::resize(rect,out,cv::Size(96,96));return true;
+}
+Color5Decision PlateRecognizer::classify_color5(const cv::Mat& rect) {
+    Color5Decision r;
+    if(!cls5_){r.status="not_loaded";return r;}
+    if(!prepare_color5_input(rect,cls5_in_)){r.status="invalid_roi";return r;}
+    std::vector<Tensor> outs;
+    if(!cls5_->run(cls5_in_,outs)){r.status="backend_run_failed";return r;}
+    return decode_color5_probabilities(outs);
+}
+int resolve_plate_color5(const std::string& text,int color,int cls_color,int layer,const PlateRecConfig& cfg,const char** src) {
+    std::string name=crop_policy::resolve(text,plate_color_cn(color),layer==1?"double":"single");
+    // Preserve ORIGINAL production special scopes (not new heuristics), including police-first priority.
+    if(text.rfind("WJ",0)==0) name="白";
+    else if(text.rfind("粤Z",0)==0 && text.find("警")==std::string::npos) name="黑";
+    int c=PC_UNKNOWN;for(int k=0;k<PC_NUM;++k)if(name==plate_color_cn(k)){c=k;break;}
+    const char* oldsrc="cls";int result=resolve_plate_color(text,c,cls_color,cfg,&oldsrc);
+    if(src)*src=(text.rfind("WJ",0)==0 || text.rfind("粤Z",0)==0 || c!=color || result!=c || text.find("警")!=std::string::npos || text.find("使")!=std::string::npos || text.find("领")!=std::string::npos || text.find("港")!=std::string::npos || text.find("澳")!=std::string::npos || text.find("学")!=std::string::npos || text.find("挂")!=std::string::npos)?"rule5":"color5";
+    return result;
+}
+
 
 // HyperLPR3 rpv3_mdict 字典（index 0 = CTC blank）
 static const char* kTokens[] = {
@@ -44,6 +85,8 @@ static std::vector<std::string> utf8_split(const std::string& s) {
 // 粗略格式校验：首字为省份/特殊汉字，总长 7(普通) 或 8(新能源)
 bool PlateRecognizer::check_format(const std::string& s) {
     auto ch = utf8_split(s);
+    int approved = approved_special_syntax(ch);
+    if (approved >= 0) return approved != 0;
     if (ch.size() < 7 || ch.size() > 8) return false;
     static const std::string prov = "京津沪渝冀豫云辽黑湘皖鲁新苏浙赣鄂桂甘晋蒙陕吉闽贵粤青藏川宁琼使";
     if (ch[0].size() != 3 || prov.find(ch[0]) == std::string::npos) {
@@ -53,7 +96,10 @@ bool PlateRecognizer::check_format(const std::string& s) {
     return true;
 }
 
-bool PlateRecognizer::load(const std::string& rec_model, const std::string& cls_model) {
+bool PlateRecognizer::load(const std::string& rec_model, const std::string& cls_model, const std::string& color5_model) {
+    cls5_.reset();
+    if(!color5_model.empty() && cls_model.empty()) return false; // never replace old selection classifier
+
     NormConfig rn;  // rec: BGR, (x-127.5)/127.5
     for (int i = 0; i < 3; ++i) { rn.mean[i] = 127.5f; rn.std[i] = 127.5f; }
     rec_ = create_engine();
@@ -62,6 +108,11 @@ bool PlateRecognizer::load(const std::string& rec_model, const std::string& cls_
         NormConfig cn;  // cls: BGR /255
         cls_ = create_engine();
         if (!cls_->load(cls_model, cn)) { cls_.reset(); return false; }
+    }
+    if(!color5_model.empty()) {
+        NormConfig cn; // BGR/255 ORT; embedded normalization AX, same established interface
+        cls5_=create_engine();
+        if(!cls5_->load(color5_model,cn) || cls5_->input_h()!=96 || cls5_->input_w()!=96){cls5_.reset();return false;}
     }
     return true;
 }
@@ -247,6 +298,9 @@ PlateRecResult PlateRecognizer::recognize(const cv::Mat& frame, const std::vecto
         int c2 = resolve_plate_color(s, r.color, r.cls_color, cfg);
         if (c2 == PC_YELLOWGREEN) { r.color = PC_YELLOWGREEN; r.color_conf = 0.9f; r.color_src = "rule"; }
     }
+    // AFTER legacy selection and confidence/rules: no hypothesis or text weight dependency on this head.
+    r.color5_enabled=bool(cls5_);
+    if(r.color5_enabled){r.raw5=classify_color5(r.rectified);r.display_color5=resolve_plate_color5(r.text,r.raw5.color,r.raw5.color,r.layer,cfg);}
     tcls += tc2.lap();
     (void)tm;
     if (t_rec) *t_rec = trec;

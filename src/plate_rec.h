@@ -12,7 +12,15 @@ enum PlateColor { PC_UNKNOWN = -1, PC_BLUE = 0, PC_YELLOW, PC_GREEN, PC_WHITE, P
 const char* plate_color_cn(int c);   // "蓝" ...
 const char* plate_color_en(int c);   // "blue" ...
 
+// Independent display head; legacy fields remain selection/weight authority.
+struct Color5Decision { int color = PC_UNKNOWN; float conf = 0.f; const char* status = "not_run"; };
+Color5Decision decode_color5_probabilities(const std::vector<Tensor>& outs);
+bool prepare_color5_input(const cv::Mat& rect, cv::Mat& out);
 struct PlateRecResult {
+    bool color5_enabled = false;
+    Color5Decision raw5;
+    int display_color5 = PC_UNKNOWN;
+
     std::string text;        // UTF-8
     float conf = 0.f;        // 字符平均置信度
     int color = PC_UNKNOWN;
@@ -53,7 +61,7 @@ struct PlateRecConfig {
 
 class PlateRecognizer {
 public:
-    bool load(const std::string& rec_model, const std::string& cls_model /*可为空*/);
+    bool load(const std::string& rec_model, const std::string& cls_model, const std::string& color5_model = "");
     // kps: 4 个角点（左上、右上、右下、左下），layer: 0 单层 1 双层
     PlateRecResult recognize(const cv::Mat& frame, const std::vector<cv::Point2f>& kps, int layer,
                              double* t_rec = nullptr, double* t_cls = nullptr);
@@ -68,13 +76,16 @@ private:
     std::pair<std::string, float> run_rec(const cv::Mat& plate);
     std::pair<std::string, float> rec_layer(const cv::Mat& rect, int layer);
     void classify_color(const cv::Mat& rect, int& color, float& conf);   // 分类网络 + HSV 兜底
-    std::unique_ptr<InferEngine> rec_, cls_;
+    std::unique_ptr<InferEngine> rec_, cls_, cls5_;
+    cv::Mat cls5_in_;
+    Color5Decision classify_color5(const cv::Mat& rect);
     cv::Mat rec_in_, cls_in_;
 };
 
 int utf8_len(const std::string& s);
 // v2.3: 由最终号码 + 颜色得到最终颜色（黄绿规则）；src 输出 rule/cls
 // color: 当前（投票）颜色；cls_color: 分类网络颜色（投票）。大型新能源号码且 cls_color 在 yellowgreen_colors 内 -> 黄绿
+int resolve_plate_color5(const std::string& text, int color, int cls_color, int layer, const PlateRecConfig& cfg, const char** src = nullptr);
 int resolve_plate_color(const std::string& text, int color, int cls_color, const PlateRecConfig& cfg, const char** src = nullptr);
 
 }  // namespace pfd

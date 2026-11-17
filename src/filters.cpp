@@ -7,6 +7,7 @@
 #include <opencv2/imgproc.hpp>
 
 namespace pfd {
+#include "approved_special_format.inc"
 
 std::vector<std::string> utf8_chars(const std::string& s) {
     std::vector<std::string> out;
@@ -43,6 +44,8 @@ static bool in_set(const std::string& c, const char* set) {
 
 bool strict_plate_format(const std::string& s, int max_letters) {
     auto ch = utf8_chars(s);
+    int approved = approved_special_syntax(ch, max_letters);
+    if (approved >= 0) return approved != 0;
     const char* prov = "京津沪渝冀豫云辽黑湘皖鲁新苏浙赣鄂桂甘晋蒙陕吉闽贵粤青藏川宁琼";
     if (ch.size() < 7 || ch.size() > 8) return false;
     // 武警 WJ
