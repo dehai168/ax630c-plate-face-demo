@@ -1,0 +1,108 @@
+{
+  "created_Asia_Shanghai": "2026-11-17T09:40:45.442170+08:00",
+  "gates_permanent": {
+    "max_abs_le": 0.03,
+    "mean_abs_le": 0.005,
+    "argmax_equal": 64
+  },
+  "immutable_split_and_truth": true,
+  "cohorts": {
+    "CAL64_SOURCE64": {
+      "count": 64,
+      "identity": "CAL64 and SOURCE64 are the SAME 64 synthetic inputs, not independent sets",
+      "manifest": {
+        "path": "/workspace/cn_val_su/v25/optimization_round69/CAL64_INPUT_LINEAGE.json",
+        "SHA256": "2d49dadb668e30ab74bc9c2a053eee0056594c30406ac5a8f87b27d45cdfa658"
+      },
+      "generator_lineage": {
+        "path": "/workspace/cn_val_su/v25/optimization_round68/INPUT_LINEAGE_FROZEN_BEFORE_INFERENCE.json",
+        "SHA256": "09adf2050f8b3943cfed02b752d5ead5c81903631f31267fa9dbbf3767decc41"
+      },
+      "generation": "R68 source-weight analytic extremal directions: 32 conv0 channels × +/-; legal BGR U8, anchor24,96, periodic6x3. Not natural photographs or GT classes.",
+      "quant_parameter_search": true,
+      "search_detail": "Included in 464 archive; official MinMax range observation in R68/R69/R84; official AdaRound/EasyQuant calibration/reconstruction/search in R72/R79 also used same464. Exact internal forward count unknown.",
+      "development_debug": true,
+      "acceptance": "Permanent CAL64 numerical regression gate vs original source golden, NOT an independent final holdout",
+      "training_R82_loss_sampler_earlystop": false,
+      "limitation": "Calibration/search and repeated diagnostic/acceptance roles overlap. CAL64 PASS would be necessary not sufficient for natural-image, five-class, NPU/video/production acceptance. Fail identities are reporting only, not tuning."
+    },
+    "464": {
+      "count": 464,
+      "components": {
+        "TRAIN400": 400,
+        "SOURCE64_CAL64": 64
+      },
+      "archive": {
+        "path": "/workspace/cn_val_su/v25/optimization_round68/work/TRAIN400_PLUS_SOURCE64.tar",
+        "SHA256": "67d9f125081cb9a95cb9f97421031f147def5d513fed03df037936c85672f277"
+      },
+      "member_manifest": {
+        "path": "/workspace/cn_val_su/v25/optimization_round68/CALIBRATION_ARCHIVE_MEMBER_MANIFEST.json",
+        "SHA256": "a3c984448f4a7eb05cb2b8aa0b09c6e14ef93d3554dd5a8cb11df672a042983b"
+      },
+      "quant_parameter_search": true,
+      "training_R82_objective_directly": false,
+      "acceptance_overlap_count": 64
+    },
+    "TRAIN400": {
+      "count": 400,
+      "manifest": {
+        "path": "/workspace/cn_val_su/v25/optimization_round55/TRAIN400_ADMISSION_AND_SELECTION_FROZEN_BEFORE_IMAGES.json",
+        "SHA256": "db2c85bd16fe777cd39bdff8d1fdf96f5e9ade4ce263bdc35c510becff8435e7"
+      },
+      "byte_manifest": {
+        "path": "/workspace/cn_val_su/v25/optimization_round55/CALIBRATION400_PREP_BYTES_FROZEN.json",
+        "SHA256": "81ee87bb4ef00810ea6182d0d47fdd6076df946ccfae42391b25157f2e5dec13"
+      },
+      "role": "Official calibration natural image subset. Selected nominal TRAIN∩learning metadata, frozen salt order; no outcome/class selection.",
+      "R82_pool_source_key_overlap": 399,
+      "R82_pool_missing_source_keys": [
+        "special:15898"
+      ],
+      "explanation": "R81 DATA_AND_RECIPE_INVENTORY already documents 399/400 join five-class TRAIN labels; nominal eligible TRAIN groups are not identical to usable labeled3348 views. No relabeling or manifest change made.",
+      "limits": "R55 legacy120 pixel/native-user50 identity coverage incomplete; JPEG premature-end warnings preserved, not silently repaired."
+    },
+    "3348": {
+      "views": 3348,
+      "unique_source_keys": 3348,
+      "groups": 3347,
+      "keys_digest": "101da02483fe1614f4f04cec39d05168563e2a5fc5a703bf877821d264516ed1",
+      "manifest": {
+        "path": "/workspace/cn_val_su/v25/optimization_round81/ELIGIBLE_TRAIN_SOURCE_KEYS_NO_LABELS.json",
+        "SHA256": "270d07ba253b61f9cc70eef55aba0e4959fe23cb5cb3e51cf7593b477d02782e"
+      },
+      "training": "R82 logits/features distillation, optional fixed CE regularizer, class-balanced sampling",
+      "quant_parameter_search": "One-time teacher U16 MinMax on3348, frozen during R82; S8 weight scale recomputed per forward",
+      "selection": "R82 earlystop/best checkpoint by same3348 pool logitMSE, not holdout",
+      "CAL64_source_overlap": "Synthetic vs natural; R68 input-hash disjointness from natural400 documented. No CAL64/SOURCE64 loss/scale in R82 training.",
+      "limits": "3348 views/3347 groups; not3348 independent groups; special only, missing594 su replay; generalization not established by pool distillMSE"
+    },
+    "R68_DEV64": {
+      "role": "Earlier rejected candidate development probes, not used in present metrics/loss/selection",
+      "limitation": "Different rules/anchor/period and rawSHA disjoint; per-case integer seed ranges overlap63, so not strictly independent random streams",
+      "evidence": {
+        "path": "/workspace/cn_val_su/v25/optimization_round68/POSTEXECUTION_SEED_NAMESPACE_LIMITATION.json",
+        "SHA256": "97103945505d92a1195a68f4448d53ba49def824022376b4c8aaf040892a7c4d"
+      }
+    },
+    "R50_R52_I00_I31": {
+      "role": "Historical fixed synthetic32 regression/runtime localization only; NOT CAL64, not true labels or real accuracy",
+      "not_used_for_new_tuning": true
+    },
+    "TRAIN128": {
+      "role": "Secondary TRAIN-side numerical check conditional on full CAL64 pass; R84 not started; existing R68 values cannot substitute R84 check"
+    },
+    "validation_protected_production": {
+      "role": "Never change labels/split, never train/tune from protected/validation or failed cases; no such images/labels opened in this batch",
+      "production_v24": "Untouched; no same-input color/v2.4 comparison fabricated"
+    }
+  },
+  "responsibility_overlap": {
+    "calibration_and_CAL64_acceptance": 64,
+    "TRAIN400_and_R82_labeled_pool": 399,
+    "R82_train_and_checkpoint_selection": "same3348 pool",
+    "consequence": "Do not interpret numerical CAL64 or distill-pool results as independent validation. Do not change partition to make pass easier."
+  },
+  "protection_metadata_limitations_inherited": true,
+  "user_data_required_now": false
+}

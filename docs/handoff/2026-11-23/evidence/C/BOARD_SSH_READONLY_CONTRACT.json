@@ -1,0 +1,40 @@
+{
+  "workflow": "C",
+  "id": "C-PF-SSH-001",
+  "title": "既有 SSH 可支撑只读健康检查",
+  "kind": "complete_ten_fields_single_hypothesis",
+  "generated_at": "2026-11-17T10:39:59+08:00",
+  "timezone": "Asia/Shanghai (UTC+8)",
+  "cancels_serial_as_full_line_blocker": true,
+  "serial_still_forbidden_this_task": "Do not open serial, send serial bytes, or toggle DTR/RTS. Serial remains unused, not a blocker for the SSH path.",
+  "ten_fields": {
+    "1_question": "历史已记录的 AX630C 网口地址上，现有 SSH（不新装、不启用服务、不改 sshd/known_hosts）能否安全登录并完成有限只读健康检查（hostname/uname/uptime、/proc/mounts、已发现分区的 ext4 errors_count、有限已有 kernel error 日志、df），而不写板、不修复、不重启、不触碰生产模型？",
+    "2_evidence": "用户最新答复：除串口外已接网线，可通过 SSH 连接。R43（2026-11-13T15:51:52–15:55:13+08:00）最后一次记录板端 eth0=10.100.100.101/24、operstate=up、网关 10.100.100.1；Windows 以太网 192.168.151.152/24。更早的恢复曾把 SSH 临时指到 192.168.151.200（RAM 启动 sshd、保留 10.100.100.101）。R37/R38 曾记录当时无 sshd/dropbear PID、无 TCP/22 监听。R48 当日稍后为新 boot，其后各轮未再实测确认 IP 或 sshd 监听。10.30.25.73 为标注机、10.30.25.10 为训练机，不得当作板卡。192.168.151.152 是用户 PC，不是板卡。历史 2168 只是历史。",
+    "3_hypothesis": "单假设：以最后一次已证板卡地址 10.100.100.101 为唯一目标（默认端口 22、历史用户名为 root），若该地址上已有可认证的 SSH 服务，即可支撑本次只读健康检查，无需打开串口或启用新服务。",
+    "4_mechanism": "先冻结合同并登记 active。Box 只做档案检索。内网探测仅在已连接的 registered machine level 697781b2-8ff0-4a80-a5ef-b65276461177 上，经原生审批，使用已有 SSH 客户端，对单一目标做连通/主机密钥核验/认证。已在 known_hosts 中才允许 StrictHostKeyChecking=yes 登录；不在则停止，不写 known_hosts，不关闭校验。BatchMode 避免交互密码。凭据只走 vault 规程；本执行器若无 Vault list 工具则不擅自从磁盘取密。不改 SSH 配置、不装服务、不部署隧道、不广域扫网。",
+    "5_history_difference": "不是打开 COM3。不是把串口物理确认当作全线阻塞。不是启用或恢复 sshd。不是重跑 42/52、不是 NPU/模型/视频。",
+    "6_data": "只读命令若且仅若认证成功：hostname、uname、uptime、/proc/mounts、/sys/fs/ext4/<实际发现分区>/errors_count、权限允许且不 clear 的有限已有 kernel error 日志、df。不读生产模型、不 RunSync、不启动模型/视频、不训练编译、不写板端文件、不 mount/remount/fsck/reboot/service restart。不全盘扫描。SSH 固有认证日志视为不可消除的副作用，不为避免日志私改系统。",
+    "7_expected_improvement": "得到当前连通/认证事实，以及（若成功）与历史 2168 分开记录的本次 errors_count 等只读观察。取消串口作为全线阻塞。",
+    "8_possible_degradation": "连错标注机/训练机/用户 PC。把未再确认的历史 IP 当成当前已证。为通过检查而启用 sshd 或关闭 hostkey 校验。打开串口复位板。把 pending 写成 running。",
+    "9_budget": "有限次数的单目标探测与只读命令；无无限等待；0 新依赖安装；结果只写 box。",
+    "10_success_failure_earlystop": "成功=单目标上认证成功并完成有限只读，或在缺口处干净停止（无 known_hosts、无监听、机器离线、vault 不可用等）并报告精确依赖。失败/早停=hostkey 变化立即停止；发现新 IO error 立即止步；审批拒绝不绕过；需要新凭据则报父缺项，不向用户索取 COM3 或重复已知密码。"
+  },
+  "single_target_from_archives": {
+    "address": "10.100.100.101",
+    "prefix": "/24",
+    "port_default": 22,
+    "historical_username": "root",
+    "last_confirmed_at": "2026-11-13T15:51:52+08:00 to 2026-11-13T15:55:13+08:00 (R43)",
+    "post_R48_reboot_reconfirmed": false,
+    "status": "LAST_DOCUMENTED_NOT_PROVEN_CURRENT",
+    "not_targets": {
+      "10.30.25.73": "labeling machine",
+      "10.30.25.10": "training machine",
+      "192.168.151.152": "historical Windows PC ethernet, not the board"
+    },
+    "historical_temporary_second_address_not_probed": {
+      "address": "192.168.151.200",
+      "note": "Earlier recovery temporarily added this address and started sshd in RAM. Later R37/R38 recorded no sshd listener. Not the single target for this check."
+    }
+  }
+}

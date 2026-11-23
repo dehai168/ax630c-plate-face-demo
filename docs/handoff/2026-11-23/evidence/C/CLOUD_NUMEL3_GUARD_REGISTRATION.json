@@ -1,0 +1,79 @@
+{
+  "workflow": "C",
+  "title": "Cloud single-variable old-slot numel guard registration",
+  "generated_at": "2026-11-17T10:04:03+08:00",
+  "timezone": "Asia/Shanghai (UTC+8)",
+  "attribution": "Parent relay of cloud result. This box did not independently rehash the remote commit, did not start this change, and did not edit the repo.",
+  "started_by": "cloud; not this registrar",
+  "contract": "/cursor/stores/user/grok-bot/agents/5431defa-b011-4c89-8819-e5db585b41a8/assets/01M7KKTKCMQVZAQ8ZB7674YN4M.md",
+  "result": "/cursor/stores/user/grok-bot/agents/5431defa-b011-4c89-8819-e5db585b41a8/assets/01M7KKTKCM5H50BY3YY5G8YJEW.md",
+  "branch": "cursor/v25-c-integration-audit-50d6",
+  "base_commit_before_this_change": "3114764f0ee64ea576cc008a56748a0520194e81",
+  "new_commit": "2241e28c110f8a10b282619459743964e8b79d4e",
+  "main_unchanged": "08eb9d6baa8e3c611dc8f3230df80fa1dcdecd07",
+  "single_variable": "src/plate_rec.cpp classify_color predicate only: outs[0].size() >= 3 -> == 3 (reported at line 204)",
+  "plate_rec_cpp": {
+    "sha256_cloud_reported": "2f1eedd78dd5705e4400ede44027098224ca1cf5239bc0d3e98dfc3cb45857a0",
+    "bytes": 16808,
+    "previous_handoff_sha256": "44fed46dc546443e7b24cc7bb171884c6eaa22d287a962a927d34e03d33af3da"
+  },
+  "other_five_source_sha256_unchanged_cloud_reported": [
+    {
+      "rel": "src/plate_rec.h",
+      "sha256": "ce144d54b501e0fa0386356bc452958bf2ad891b3004d9dd7e181626721cd185"
+    },
+    {
+      "rel": "src/main.cpp",
+      "sha256": "39db22bb0d7d7aa2fb4466f33320a6111baebb4219076e7948ddae3789cd23c8"
+    },
+    {
+      "rel": "src/color5_crop_policy.inc",
+      "sha256": "49508bca5c1f6abc323695f452d0a49205103d73dad57c09e2e7a4bd5858c1b6"
+    },
+    {
+      "rel": "src/filters.cpp",
+      "sha256": "f69c8649919f5c9d2ce915a4def6d061b9ecb1798d412d027c059324ada845d8"
+    },
+    {
+      "rel": "src/approved_special_format.inc",
+      "sha256": "6cf14ec7b6f74e2c178816d3d35fd7fb244dada418fac8393165a0bb560f7c5b"
+    }
+  ],
+  "unchanged_by_this_commit": [
+    "map3 {PC_BLUE, PC_GREEN, PC_YELLOW}",
+    "empty --color / HSV fallback",
+    "--color5",
+    "double-layer color input",
+    "models and version numbers"
+  ],
+  "predicate_stdlib_test_cloud_reported": {
+    "not_full_classify_color": true,
+    "not_full_project_compile": true,
+    "compile_seconds": 0.214,
+    "lengths_reject": [
+      0,
+      1,
+      2,
+      4,
+      5,
+      6,
+      12
+    ],
+    "lengths_accept": [
+      3
+    ],
+    "fails": 0,
+    "exit_code": 0,
+    "len3_map3_check": "representative values still resolve under unchanged map3 (green/blue/yellow index checks reported)"
+  },
+  "acceptance": "accept_no_release",
+  "not_claimed": [
+    "complete classify_color runtime test",
+    "NPU2 GetIOInfo or NPU pass",
+    "board complete video pass",
+    "production acceptance",
+    "merge, deploy, or PR",
+    "local independent SHA re-verification of commit 2241e28"
+  ],
+  "note_on_trainer_sentence_in_cloud_result": "Cloud result text still said the trainer was not recovered, which was true of that ==3 commit scope. This registration does not treat that sentence as the current C contract after consuming B14."
+}

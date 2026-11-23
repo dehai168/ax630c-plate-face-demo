@@ -1,0 +1,43 @@
+{
+  "cell": "production_v2.4_recognizer × frozen_canonical_val600 × locked_Prefix+TTA",
+  "generated_at_Asia_Shanghai": "2026-11-17T09:47:40+08:00",
+  "timezone_label": "Asia/Shanghai (UTC+8)",
+  "status": "UNKNOWN",
+  "cell_filled": false,
+  "stage2_290_search": "still stands; not repeated this stage",
+  "stage3_preflight": {
+    "production_axmodel_identity": "BOUND 728d8f2065632dbd383c347d80f4fba12a38d270da9289223cc709285ba66576",
+    "official_float_correspondence": "NOT_FOUND",
+    "software_eval": "NOT_EXECUTED",
+    "reuse": "none"
+  },
+  "must_not_fill_with": [
+    "teacher greedy",
+    "95/106",
+    "96/106",
+    "accepted 554/600 without official correspondence",
+    "546/549 greedy of the then-new rec",
+    "rec_real_minmax 02a2f4f1"
+  ],
+  "exact_missing_artifacts": [
+    {
+      "type": "official_export_or_compile_correspondence_manifest",
+      "must_name": "the float source (ONNX and/or PT) whose official export/compile produced production plate_rec_npu1.axmodel SHA 728d8f2065632dbd383c347d80f4fba12a38d270da9289223cc709285ba66576",
+      "acceptable_sources": "existing off-board Pulsar/AXERA compile package, official export log, or a previously attested sidecar from the same official export that produced 728d8f20. Not a newly created re-export in this project stage."
+    },
+    {
+      "type": "the_already_exported_float_file",
+      "formats": [
+        "ONNX",
+        "PT"
+      ],
+      "constraint": "must be the file named by that official correspondence, already existing; I/O must fully match the frozen contract (48×160 BGR, right pad 128, (x-127.5)/127.5 or equivalent, locked Prefix+TTA / charset). Need only one of ONNX or PT if it already supports the frozen interface."
+    }
+  ],
+  "paths": {
+    "original_proposal_unmodified": "/workspace/cn_val_su/v25/delivery_20261117/A/stage2_archive_close_20261117/EXPERIMENT_PROPOSAL_V24_VAL600_PREFIX_TTA.json",
+    "corrected_proposal": "/workspace/cn_val_su/v25/delivery_20261117/A/stage3_lineage_preflight_20261117/EXPERIMENT_PROPOSAL_V24_VAL600_PREFIX_TTA_CORRECTED.json",
+    "preflight": "/workspace/cn_val_su/v25/delivery_20261117/A/stage3_lineage_preflight_20261117/LINEAGE_PREFLIGHT.json",
+    "decision": "/workspace/cn_val_su/v25/delivery_20261117/A/stage3_lineage_preflight_20261117/EVAL_DECISION.json"
+  }
+}

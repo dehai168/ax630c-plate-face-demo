@@ -1,0 +1,165 @@
+{
+  "workflow": "C",
+  "generated_at": "2026-11-17T09:38:19+08:00",
+  "timezone": "Asia/Shanghai (UTC+8)",
+  "definition_source": "Existing evidence only. This first batch did not connect to the PC or board and did not probe devices.",
+  "historical_ext4": {
+    "partition": "mmcblk0p14 (data2), ext4 RW, dual-mounted at /opt and /var/mnt/emmc/freq_rw",
+    "last_measured_errors_count": 2168,
+    "measurement_history": [
+      {
+        "round": 38,
+        "p14_errors_count": 2166,
+        "note": "Posttest after one bounded synthetic write; pretest count was not collected."
+      },
+      {
+        "round": 39,
+        "p14_errors_count": 2166,
+        "note": "Readonly health check; 2166 unchanged from R38 posttest."
+      },
+      {
+        "round": 47,
+        "p14_errors_count": null,
+        "note": "Not remeasured."
+      },
+      {
+        "round": 48,
+        "p14_errors_count": 2168,
+        "at": "2026-11-13T17:23:52+08:00",
+        "note": "New boot; dmesg at 36.16/36.18s had two p14 ext4_mb_generate_buddy errors on groups 25/26. 2168 is 2 above R39; R47 had no count, so the +2 cannot be strictly attributed to that reboot."
+      },
+      {
+        "round": 49,
+        "p14_errors_count": 2168,
+        "at": "2026-11-13T17:40:22+08:00",
+        "note": "Same boot as R48; 2168->2168; 0.53s A/B window is not a stability test. No new EXT4-fs error events in retained dmesg since R48."
+      },
+      {
+        "round": 50,
+        "p14_errors_count_before_after": [
+          2168,
+          2168
+        ],
+        "note": "RAM-only color5 IO test; no new storage error events after preflight. Not a clean-filesystem certificate."
+      }
+    ],
+    "this_batch_did_not_remeasure": true,
+    "not_a_repair_certificate": true,
+    "p13_last_measured_errors_count": 0,
+    "p13_zero_is_not_full_health_certification": true,
+    "mount_warnings_recorded": "p13/p14 mounted without journal; p14 also 'mounting unchecked fs' in R48 dmesg."
+  },
+  "eight_project_file_backups": {
+    "status": "8/8 complete as of R44, 7862564 bytes, independently verified on box",
+    "completed_at": "2026-11-13T16:03:24 to 16:21:46+08:00",
+    "explicitly_not_a_system_backup_or_full_image": true,
+    "does_not_clear_ext4_risk": true,
+    "does_not_recover_R37_raw_capture": true,
+    "zip_private_box": {
+      "name": "PRIVATE_EIGHT_PROJECT_FILES_BACKUP.zip",
+      "bytes": 4694892,
+      "SHA256": "4a684c9a9d91a70fb722df49df9ead06413d4806c84ea5981b434d1847857c9f",
+      "rechecked_in_R47": true
+    },
+    "files": [
+      {
+        "id": "F0",
+        "board_path": "/opt/cn_val/list.txt",
+        "bytes": 25967,
+        "SHA256": "404510404fee7e2909171a427f4667a351a4da170345df34ba5fb56f2fa0b02e",
+        "transfer_round": "R43",
+        "box_path": "/workspace/cn_val_su/v25/optimization_round43/backup_files/"
+      },
+      {
+        "id": "F1",
+        "board_path": "/opt/cn_val/m/cls_mix_mse_i8.axmodel",
+        "bytes": 579844,
+        "SHA256": "4aa09f8deb89154646b8069926e00065b57ed93761827a82f4cf43680764948f",
+        "transfer_round": "R44"
+      },
+      {
+        "id": "F2",
+        "board_path": "/opt/cn_val/m/cls_real_i8.axmodel",
+        "bytes": 579820,
+        "SHA256": "4dfa80c960396676e289db2d027ec0e55752c2792c46f688dc4a3c13f7eed357",
+        "transfer_round": "R44"
+      },
+      {
+        "id": "F3",
+        "board_path": "/opt/cn_val/m/cls_real_u16.axmodel",
+        "bytes": 738690,
+        "SHA256": "2d12e481060cc34238ddb7103c81d4814bce48a0941b275945c226fb989994af",
+        "transfer_round": "R44"
+      },
+      {
+        "id": "F4",
+        "board_path": "/opt/cn_val/m/det_mix.axmodel",
+        "bytes": 778443,
+        "SHA256": "1da3196d63e17e261e26c17f92e45a728c959d60c5f36e7ea1137b5dd086d297",
+        "transfer_round": "R44"
+      },
+      {
+        "id": "F5",
+        "board_path": "/opt/cn_val/m/det_real.axmodel",
+        "bytes": 778507,
+        "SHA256": "1eaa7319119dd90a6b19f9b96d397148ee8d52ed78d67eccca64c65d5b8e393c",
+        "transfer_round": "R44"
+      },
+      {
+        "id": "F6",
+        "board_path": "/opt/cn_val/m/det_real_headu16.axmodel",
+        "bytes": 785179,
+        "SHA256": "371c41b6905ff937a14be4b3266454fe92317e57d153296b1021f791159376cb",
+        "transfer_round": "R44"
+      },
+      {
+        "id": "F7",
+        "board_path": "/opt/cn_val/m/rec_real_minmax.axmodel",
+        "bytes": 3596114,
+        "SHA256": "02a2f4f181934c08e1db0ab720dcb5bc0e63b48fc5f59f5ef71e774e52f3f030",
+        "transfer_round": "R44"
+      }
+    ]
+  },
+  "system_image_backup": {
+    "status": "0 bytes; preparation only in R47",
+    "planned_opaque_scope_bytes": 7826571264,
+    "not_executed": true,
+    "missing_for_future_imaging": "OEM board model / official non-flash external rescue boot and backup media instructions (R47). Not requested again by this inventory unless the parent is ready to schedule that maintenance track."
+  },
+  "forbidden_now_and_until_explicit_itemized_authorization": [
+    "Format the filesystem",
+    "Active filesystem repair, including fsck write repair and fsck -n as a casual probe",
+    "System restore, firmware flash, or unofficial image write",
+    "Reboot or power cycle (R48 reboot was historical; this batch authorizes none)",
+    "Any write under /opt or the p14 freq_rw mount, including test artifacts, snapshots, JSON, models, logs, packs, or sync-induced metadata updates",
+    "Replace or modify production v2.4 models, binary, or run.sh",
+    "Any other board write, remount, unmount, service kill/stop, network/firewall/route change, or new listener",
+    "Use 8 project-file backups as if they were a system snapshot protecting repair"
+  ],
+  "first_batch_this_delivery": {
+    "board_or_PC_connection": "NOT_PERFORMED",
+    "device_probe": "NOT_PERFORMED",
+    "action": "Define scope from existing evidence only."
+  },
+  "future_readonly_board_scope_from_existing_evidence_not_authorization_to_run_now": {
+    "allowed_in_principle_after_a_later_explicit_scope": [
+      "Short COM3 readonly checks of already-used commands (uptime, boot id, mount, errors_count, df, stat of known production paths) with COM3 closed afterwards and no echo/credential persistence.",
+      "If a later bounded test is separately authorized: single-process, original assets read-only, all new outputs only on proven tmpfs (/tmp or /dev/shm), no production modification, resource/time boxed, write-side effects of the real entrypoint confirmed absent, existing load/watchdog considered. R50 is the precedent for RAM-only color5 IO, not a standing permit to repeat or expand."
+    ],
+    "still_blocked_without_new_authorization": [
+      "Any test that would write snapshots/video/JSON under /opt.",
+      "Repeating R50 color5 NPU numeric comparison without a new, distinct, evidence-based hypothesis (the numeric gate already failed).",
+      "Full-driver held recording (R36 noted original image_eval loads/warms face even with NO_FACE=1 and writes overlays by default).",
+      "Filesystem maintenance, imaging, or reboot."
+    ],
+    "important_results": "Must be stored off-board (Windows then official CopyToBox / box), with SHA/CRC, as in R44/R50. Do not keep unique results only on p14."
+  },
+  "future_write_requires_confirmed_safety_conditions": [
+    "Itemized user/parent authorization naming the exact write, path, and purpose",
+    "No /opt or other p14 persistent write unless a reviewed alternative persistent volume or rescue environment is approved",
+    "Prefer tmpfs and immediate off-board copy",
+    "System-level backup/recovery-media scope is still unsatisfied; do not treat R44 as that condition",
+    "Stop on any new ext4 error increment or unexpected write"
+  ]
+}

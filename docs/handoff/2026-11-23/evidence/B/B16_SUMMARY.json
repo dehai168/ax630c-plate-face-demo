@@ -1,0 +1,45 @@
+{
+  "task": "B16_public_supported_capture_research",
+  "completed_Asia_Shanghai": "2026-11-17T10:07:57.004195+08:00",
+  "status": "RESEARCH_COMPLETE_EXACT_VERSION_STANDALONE_PREOBSERVER_NOT_ESTABLISHED",
+  "calls": {
+    "model": 0,
+    "train": 0,
+    "compile": 0,
+    "quantization_build": 0,
+    "internal_API": 0
+  },
+  "qualified_capture_entry_found": false,
+  "legal_partial_entry": "ActualV8help ONNXrun+perlayer; differentexecutor, staticpublicsourceinconsistency, exactruntimeuntested",
+  "new_static_finding": "floatdebug is dequantizedpostquantgraph rerun, not liveobservercapture; fulltensor not4096truncate; defaultdumpbatch1",
+  "next_numeric_proposal": "B17 NOT_STARTABLE pendingofficialclarification",
+  "one_repair_hypothesis": "TRAIN-only gridrobustdistillation NOT_STARTABLE; no justifiedTRAINenvelope or exactobserverwitness",
+  "original_CAL64": {
+    "Max": 0.04685291647911072,
+    "MAE": 0.005205561543925796,
+    "argmax": 63,
+    "n": 64,
+    "status": "REJECTED_UNCHANGED",
+    "gates": {
+      "max_abs_le": 0.03,
+      "mean_abs_le": 0.005,
+      "argmax_equal": 64
+    },
+    "provenance": "InheritedR84/B11; not rerun inB16"
+  },
+  "CAL64_SOURCE64_overlap": "In464calibration/historysearch/debug/gate; notindependentholdout; barredfromtrainingloss/selection",
+  "user_data_required_now": false,
+  "external_gap": "Exactversion supportedstandalonepreobserver interface andstage semantics; parentonly question saved",
+  "A_C": "Independentproceed; noA/C edits/globalstop",
+  "resource": {
+    "elapsed_seconds_at_generation": 363.16918997500034,
+    "wall_cap_seconds": 600,
+    "writer_CPU_affinity": [
+      0,
+      1
+    ],
+    "writer_RLIMIT_AS_bytes": 2147483648,
+    "writer_measured_max_RSS_bytes": 17768448,
+    "whole_research_tree_RSS": "Notcontinuouslymonitored; do not claim measuredwholeturnpeak. Static smalltext/ZIPonly;no modelimport/load/execution."
+  }
+}

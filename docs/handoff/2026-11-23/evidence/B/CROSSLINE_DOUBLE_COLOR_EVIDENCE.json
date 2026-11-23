@@ -1,0 +1,95 @@
+{
+  "canonical_color_model_SHA256": "ecba573c49a847321def9106b25d6db756fd98ddd98c0909007d074e4f104360",
+  "student_SHA256": "9c840305ea6f5cb439b78ac350c05cb2f1674357bb47652e34f2f9de83600827",
+  "repo_model_prefix_9d41c7": "UNBOUND notassumed same ascanonicalorstudent; no repo access",
+  "actual_current_canonical_recipe_evidence": [
+    {
+      "path": "/workspace/cn_val_su/finetune_original_v2/optimize_plate_v2.py",
+      "lines": [
+        7,
+        8,
+        17,
+        35,
+        36,
+        47,
+        53,
+        54
+      ],
+      "finding": "Imports commonData; color trainingusesData(train,color,True), savesbest_color_v2.pt/state npz and fixture"
+    },
+    {
+      "path": "/workspace/cn_val_su/finetune_original_v2/plate_optim_common.py",
+      "function": "crop",
+      "lines": [
+        9,
+        18
+      ],
+      "finding": "Specialsource quadrilateralrectifiedfirst, then explicitlayer==double horizontallyconcats resizedupper5/12 withlowerfrom1/3. SU returnsim atline11 beforedoublebranch."
+    },
+    {
+      "path": "/workspace/cn_val_su/finetune_original_v2/plate_optim_common.py",
+      "function": "Data.__init__/__getitem__",
+      "lines": [
+        20,
+        36
+      ],
+      "finding": "Calls crop beforekindbranch forbothrec/color; colorresizes resultingstitchedim96x96, BGRfloat32/255, transposeCHWcopy. Thus canonicalspecialdouble colorcontract is stitched, notrawrectifieddouble."
+    },
+    {
+      "path": "/workspace/cn_val_su/finetune_original_v2/export_color_v2.py",
+      "lines": [
+        7,
+        16
+      ],
+      "finding": "Consumesbest_color_state.npz; explicitBNfold; all18sourceweight/bias initializers matchcurrentcanonicalecba; doesnotcroporundodouble-stitch."
+    },
+    {
+      "path": "/workspace/cn_val_su/v25/optimization_round82/train_qat_distill.py",
+      "function": "crop + image preparation",
+      "lines": [
+        92,
+        111,
+        326,
+        327
+      ],
+      "finding": "R82 archivedcrop repeatsdoublehorizontalstitch, thenresize96; student9c840 staysdistinctfromrepo9d41."
+    }
+  ],
+  "already_existing_TRAIN400_manifest": "/workspace/cn_val_su/v25/optimization_round55/TRAIN400_ADMISSION_AND_SELECTION_FROZEN_BEFORE_IMAGES.json",
+  "manifest_SHA256": "db2c85bd16fe777cd39bdff8d1fdf96f5e9ade4ce263bdc35c510becff8435e7",
+  "projected_fields_only": [
+    "source_key",
+    "source",
+    "layer",
+    "group_id"
+  ],
+  "layer_flag_counts_in_existing_subset": {
+    "single": 379,
+    "double": 21
+  },
+  "explicit_double_examples": [
+    {
+      "source_key": "special:18375",
+      "source": "special",
+      "layer": "double",
+      "group_id": "bdc4a543c79deec3661827d0ba7975b65f5f541d157f64e81a506f5a65e57fc9"
+    },
+    {
+      "source_key": "special:16528",
+      "source": "special",
+      "layer": "double",
+      "group_id": "ca46f1fe0f840ed3ba790628c2cdeb1c3940c29d702a375e6d121f67bd952009"
+    },
+    {
+      "source_key": "special:19413",
+      "source": "special",
+      "layer": "double",
+      "group_id": "7b3aba13953b892c830f3b16027e8cc2ac6e99b741130414b1201e9ab7fe1b7f"
+    }
+  ],
+  "limitations": [
+    "21explicitdouble inexistingTRAIN400metadata provesannotationflagpresence in that admittedTRAINsubset, notalltraining/validationdistribution. No new labels/images scanned.",
+    "Canonicaltraining/exportroute staticallyboundthroughall18initializers; no claimofactualhistoricalper-imagecropdump forentiretraining.",
+    "ParentC claimrepo infer_plate stitches vsR40Cpprawrectified is crosslinecontext, not independentlyauditedhere; doNOTdirectlypatchC++ untilrepo9d41actualmodelcontractbound."
+  ]
+}

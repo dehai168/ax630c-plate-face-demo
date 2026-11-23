@@ -1,0 +1,224 @@
+{
+  "generated_at": "2026-11-17T09:42:29+08:00",
+  "timezone": "Asia/Shanghai (UTC+8)",
+  "purpose": "Archive-to-cloud handoff of already-frozen R40+R46 patches. No training, compile, inference, patch rewrite, live-checkout investigation, or production change.",
+  "remote": {
+    "url": "https://github.com/dehai168/ax630c-plate-face-demo",
+    "how_found": "Parent CloudAgent repository search; unique application repo.",
+    "ref": null,
+    "commit": null,
+    "identity_status": "remote_found_ref_and_commit_pending_cloud_verification"
+  },
+  "base_archive": {
+    "path": "/workspace/ax630c_plate_face_demo_v2.4_src.tar.gz",
+    "recorded_SHA256": "e04ff400ad5f7709b3dbfe518262baa7f8b9bd3989f4dbfe29135e98935074ba",
+    "bytes": 101411744,
+    "member_prefix": "ax630c_plate_face_demo/",
+    "note": "This batch listed and hashed specified members with tar -xOf (stdout only). Did not unpack into a repo and did not inspect the live checkout."
+  },
+  "patches": [
+    {
+      "step": 1,
+      "id": "R40",
+      "handoff_file": "R40_INTEGRATION_EXACT.diff",
+      "original_path": "/workspace/cn_val_su/v25/optimization_round40/INTEGRATION_EXACT.diff",
+      "bytes": 12871,
+      "sha256": "4eaac6ac5248029b14853ac84fc84400a6550dcd6a820bb43bba5ebda328970a",
+      "unmodified_original": true,
+      "contents": "Unified diff only (gold/ vs integrated/). No build logs.",
+      "path_prefix": "gold/ and integrated/; apply from repo root with git apply -p1 or patch -p1 so paths become src/...",
+      "files_in_diff": [
+        "src/plate_rec.h",
+        "src/plate_rec.cpp",
+        "src/main.cpp"
+      ],
+      "missing_from_this_original_diff": "src/color5_crop_policy.inc is #included by the patched plate_rec.cpp but is a new file not present in INTEGRATION_EXACT.diff. Do not rewrite the original diff. Add the companion file after a successful R40 apply (step 2)."
+    },
+    {
+      "step": 2,
+      "id": "R40_companion_new_file",
+      "handoff_file": "src_color5_crop_policy.inc",
+      "install_as": "src/color5_crop_policy.inc",
+      "bytes": 728,
+      "sha256": "49508bca5c1f6abc323695f452d0a49205103d73dad57c09e2e7a4bd5858c1b6",
+      "unmodified_original": true,
+      "source": "/workspace/cn_val_su/v25/optimization_round40/integrated_source/src/color5_crop_policy.inc",
+      "note": "Required companion of R40. A recorded R40 file crop_policy_reference_sha256.txt contains baf7baedd29632ab8d5aff86b8eed8bd63483683932651bf44ed91d6a689874c; that value is not the SHA of this 728-byte inc. Use this inc SHA for apply verification."
+    },
+    {
+      "step": 3,
+      "id": "R46",
+      "handoff_file": "R46_MINIMAL_DERIVED_FORMAT_FIX.diff",
+      "original_path": "/workspace/cn_val_su/v25/optimization_round46/MINIMAL_DERIVED_FORMAT_FIX.diff",
+      "bytes": 3364,
+      "sha256": "2b6d511bec7d5b46e1af7415fa973de9347d1e74248cdd8a7bcd25602766b470",
+      "unmodified_original": true,
+      "contents": "Unified diff only (baseline/ vs fixed/). Reconstructs src/approved_special_format.inc identically (1778 bytes, SHA 6cf14ec7b6f74e2c178816d3d35fd7fb244dada418fac8393165a0bb560f7c5b). Companion copy also provided as src_approved_special_format.inc for inspection, not as a second apply.",
+      "path_prefix": "baseline/ and fixed/; apply from repo root with git apply -p1 or patch -p1.",
+      "depends_on": "Must be applied only after R40 + color5_crop_policy.inc. The plate_rec.cpp hunk context includes namespace crop_policy / color5_crop_policy.inc, which does not exist on vanilla v2.4.",
+      "files_in_diff": [
+        "src/filters.cpp",
+        "src/plate_rec.cpp",
+        "src/approved_special_format.inc"
+      ]
+    }
+  ],
+  "apply_order": [
+    "0. Identity: confirm remote is https://github.com/dehai168/ax630c-plate-face-demo. Record the candidate base ref/commit. This is ready_to_investigate, not ready_to_apply.",
+    "1. Hash-check the three v2.4 base files listed below (and preferably the unchanged guards). If any required base SHA mismatches the archive member, STOP. Do not apply, do not invent hunks, do not retarget to a 'close' file.",
+    "2. Apply R40_INTEGRATION_EXACT.diff from repo root: git apply -p1 --check, then git apply -p1. Check failure or conflict: STOP.",
+    "3. Install src_color5_crop_policy.inc as src/color5_crop_policy.inc with exact bytes. Do not modify INTEGRATION_EXACT.diff to insert this file.",
+    "4. Verify post-R40 expected SHAs. Mismatch: STOP.",
+    "5. Apply R46_MINIMAL_DERIVED_FORMAT_FIX.diff: git apply -p1 --check, then git apply -p1. Check failure or conflict: STOP. Do not apply R46 to vanilla v2.4.",
+    "6. Verify final expected SHAs, including new src/approved_special_format.inc.",
+    "7. Create an independent non-production branch only after steps 1-6 pass. Do not merge to production, do not compile, do not infer, do not deploy in this step."
+  ],
+  "stop_rules": [
+    "Any required base or post-apply SHA mismatch.",
+    "git apply --check or apply reports conflict, offset fuzz you cannot prove is identical, or missing context.",
+    "R46 applied without successful R40+inc state.",
+    "Need to edit hunks, relax paths, or 'fix' whitespace to make a patch apply — stop and report instead.",
+    "Remote, ref, or commit cannot be established, or more than one plausible base commit disagrees on required SHAs.",
+    "Any action that would modify production v2.4, the live board, or rewrite the original patch bytes."
+  ],
+  "required_base_sha256_from_v24_archive_members": [
+    {
+      "rel": "src/plate_rec.h",
+      "bytes": 4695,
+      "sha256": "1310998b156f6449a62e40cfbd5ec79a9221948cc773ce2657ba91a323e4e7f9",
+      "role": "R40 apply base",
+      "r40_gold_matches_archive": true
+    },
+    {
+      "rel": "src/plate_rec.cpp",
+      "bytes": 13416,
+      "sha256": "d34d37015580cecd36063573bc5ef2938ba4d4cd305f8dccea3c4adbf20a8b71",
+      "role": "R40 apply base",
+      "r40_gold_matches_archive": true
+    },
+    {
+      "rel": "src/main.cpp",
+      "bytes": 57128,
+      "sha256": "3bbd4a3db62a8647b1896003ec42c63ef4840631f31747ca7f225dc747116cf5",
+      "role": "R40 apply base",
+      "r40_gold_matches_archive": true
+    },
+    {
+      "rel": "src/filters.cpp",
+      "bytes": 13783,
+      "sha256": "7a3a86c960c55c94642c3cdfbfd8d62821ad7b75c99aa5c1e800097976eb2188",
+      "role": "unchanged by R40; R46 apply base",
+      "r40_gold_matches_archive": true
+    }
+  ],
+  "recommended_unchanged_guards_from_archive": [
+    {
+      "rel": "src/filters.h",
+      "bytes": 5380,
+      "sha256": "d2dd740053e350ef637cbc11127039aee8fa528cf040ccd3619c8e069cba031c"
+    },
+    {
+      "rel": "CMakeLists.txt",
+      "bytes": 3259,
+      "sha256": "107061f667083db6e71ccbcebcd1efdfe195b964ac0ef587ca0c622cb6196d29",
+      "note": "Neither patch touches CMakeLists.txt."
+    },
+    {
+      "rel": "src/version.h",
+      "bytes": 40,
+      "sha256": "e212f05214379dca7d6253775cb67f50b55042335dd9f4321e7262402ce7459e"
+    },
+    {
+      "rel": "src/infer/engine_ort.cpp",
+      "bytes": 3701,
+      "sha256": "ecf7d5df344814e81b812674e16e6669a3dc98326ac8932040cefa846911f992",
+      "note": "R41 used this file unmodified; do not change it in this branch step."
+    },
+    {
+      "rel": "src/infer/engine_ax.cpp",
+      "bytes": 6539,
+      "sha256": "3c901f285481f54e2e0512bad4f19c6c71b8ddcb98d441255b41f83d7b977b04"
+    },
+    {
+      "rel": "src/detector.cpp",
+      "bytes": 6080,
+      "sha256": "010ea14b6e031a611593d920385acbfe0a42b99f862103d15d0d9670b2076af0"
+    },
+    {
+      "rel": "src/bytetrack.cpp",
+      "bytes": 9343,
+      "sha256": "0d241e4cc6028996d962c4db0d5c53913906116de3592d74d15544964fdd82c2"
+    }
+  ],
+  "expected_after_R40_plus_inc": [
+    {
+      "rel": "src/plate_rec.h",
+      "bytes": 5362,
+      "sha256": "ce144d54b501e0fa0386356bc452958bf2ad891b3004d9dd7e181626721cd185"
+    },
+    {
+      "rel": "src/plate_rec.cpp",
+      "bytes": 16676,
+      "sha256": "fd653109a249d2ef123dab8b58904af1af52702e29b1f0243fb53df1e14310d6"
+    },
+    {
+      "rel": "src/main.cpp",
+      "bytes": 58093,
+      "sha256": "39db22bb0d7d7aa2fb4466f33320a6111baebb4219076e7948ddae3789cd23c8"
+    },
+    {
+      "rel": "src/color5_crop_policy.inc",
+      "bytes": 728,
+      "sha256": "49508bca5c1f6abc323695f452d0a49205103d73dad57c09e2e7a4bd5858c1b6"
+    },
+    {
+      "rel": "src/filters.cpp",
+      "bytes": 13783,
+      "sha256": "7a3a86c960c55c94642c3cdfbfd8d62821ad7b75c99aa5c1e800097976eb2188"
+    }
+  ],
+  "expected_after_R46_final": [
+    {
+      "rel": "src/plate_rec.h",
+      "bytes": 5362,
+      "sha256": "ce144d54b501e0fa0386356bc452958bf2ad891b3004d9dd7e181626721cd185",
+      "unchanged_from_post_R40": true
+    },
+    {
+      "rel": "src/plate_rec.cpp",
+      "bytes": 16808,
+      "sha256": "44fed46dc546443e7b24cc7bb171884c6eaa22d287a962a927d34e03d33af3da"
+    },
+    {
+      "rel": "src/main.cpp",
+      "bytes": 58093,
+      "sha256": "39db22bb0d7d7aa2fb4466f33320a6111baebb4219076e7948ddae3789cd23c8",
+      "unchanged_from_post_R40": true
+    },
+    {
+      "rel": "src/color5_crop_policy.inc",
+      "bytes": 728,
+      "sha256": "49508bca5c1f6abc323695f452d0a49205103d73dad57c09e2e7a4bd5858c1b6",
+      "unchanged_from_post_R40": true
+    },
+    {
+      "rel": "src/filters.cpp",
+      "bytes": 13928,
+      "sha256": "f69c8649919f5c9d2ce915a4def6d061b9ecb1798d412d027c059324ada845d8"
+    },
+    {
+      "rel": "src/approved_special_format.inc",
+      "bytes": 1778,
+      "sha256": "6cf14ec7b6f74e2c178816d3d35fd7fb244dada418fac8393165a0bb560f7c5b"
+    }
+  ],
+  "do_not_include_in_branch_or_upload": [
+    "Any .axmodel / .onnx / .pt / compiled ELF or NPU artifact, including color5 ecd32677…8574 and production v2.4 models.",
+    "test_data videos, GT, held/val/user50/protected images or labels.",
+    "R40/R45/R46 build logs, test harnesses, synthetic AVI, native_cv_build, Gold/integrated full trees as a substitute for the two original diffs.",
+    "Board backups (R44 8 project files), system images, credentials, COM logs with possible secrets.",
+    "Quantization work from workflow B, unofficial patch rewrites, or the first (pre-API-correction) R46 derived helper — only the final MINIMAL_DERIVED_FORMAT_FIX.diff / final inc.",
+    "Live /workspace/ax630c_plate_face_demo checkout contents; it was not investigated."
+  ],
+  "not_claimed_by_this_handoff": "Applying these patches is not offline-test rerun, not NPU pass, not board video pass, and not production acceptance. R50 color5 NPU numeric gate remains failed. R31 remains rejected."
+}

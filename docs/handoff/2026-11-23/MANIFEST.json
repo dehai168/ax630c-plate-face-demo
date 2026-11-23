@@ -1,0 +1,366 @@
+{
+  "name": "v25-handoff-20261123",
+  "generated_at": "2026-11-23T20:18:43+08:00",
+  "timezone": "Asia/Shanghai (UTC+8)",
+  "description": "Text handoff package for AX630C plate-face v2.5. Models/data/backups are inventoried but not included. Remote git was not fetched in the packing stage.",
+  "release_status": "NO-GO",
+  "file_count": 71,
+  "files": [
+    {
+      "path": "APPENDIX_OTHER_WORK.md",
+      "bytes": 2606,
+      "sha256": "3a398d99ed84c36fddf0e7ab2b38af5227020d22db94f51acf5a1f0860dc2c20"
+    },
+    {
+      "path": "A_OCR.md",
+      "bytes": 3160,
+      "sha256": "e2ccdd6f6be3fa4a54274845c8dddd811b76614d0592bb6b3385fd58202e6634"
+    },
+    {
+      "path": "B_COLOR.md",
+      "bytes": 3180,
+      "sha256": "499e8241c8f251970c90eb470c775c5f73f8052265fe4eca26ba0a4559453424"
+    },
+    {
+      "path": "C_INTEGRATION_BOARD.md",
+      "bytes": 7107,
+      "sha256": "95422b7ff9bf0f3591b2da7b23fa9bff248c21bacbc26750f00a97d98afd320c"
+    },
+    {
+      "path": "DATA_MODELS_ENV.md",
+      "bytes": 6274,
+      "sha256": "780ea4698b698e1cec14d3665bedf8c7c01089daa902dc07d10a283f2979a507"
+    },
+    {
+      "path": "EVIDENCE_INDEX.md",
+      "bytes": 18425,
+      "sha256": "83cf6136b720eb2880eed5c42cd994eb54313c4c4919aa56085d412bd84f2797"
+    },
+    {
+      "path": "EXPERIMENT_HISTORY.md",
+      "bytes": 4633,
+      "sha256": "7060211508a011aa3d3eeb3d04129e71a1ec5bae4adaf9b77ddd7dd044ed57b5"
+    },
+    {
+      "path": "GIT_SUBMISSION.md",
+      "bytes": 2220,
+      "sha256": "8a5f2261d066ee04da6c818957237b3df31cfd0bde696db5e63f5aba8ee9f295"
+    },
+    {
+      "path": "NEXT_TASKS.md",
+      "bytes": 3449,
+      "sha256": "2e54250892c3cbd12a80e4558f5b6b3d039ed86b73f116988cbad4d1f02168b3"
+    },
+    {
+      "path": "PRIVACY_AND_SANITIZATION.md",
+      "bytes": 1054,
+      "sha256": "858361d3cc8661e081890104378ed50c53c498ef409a4e63d1dee980b74d166e"
+    },
+    {
+      "path": "PROJECT_STATE.md",
+      "bytes": 5235,
+      "sha256": "d218f98e91d84fd4a531b534fca9d711b2c5d7a223d3fcf282c0ba3871d2a6d9"
+    },
+    {
+      "path": "README.md",
+      "bytes": 6419,
+      "sha256": "d363f15d34b7de6049577e53df5eb2bc93d3dfb8ba763114ee60848aa1fa3e8b"
+    },
+    {
+      "path": "evidence/A/ARTIFACT_INDEX.json",
+      "bytes": 10839,
+      "sha256": "1eac1cacca3c7b9539b0e6ed9548a6981156f7498d40f86c9f3effe1ff9a6dbf"
+    },
+    {
+      "path": "evidence/A/NEXT_TASK_QUEUE.json",
+      "bytes": 24118,
+      "sha256": "793eece8ec59ad5608a300d2380bc047bc50f92f1702c7f165505d19b36d7398"
+    },
+    {
+      "path": "evidence/A/STAGE3_SUMMARY.md",
+      "bytes": 4358,
+      "sha256": "6f4c308d8d6f0ba9b7947878800e953d1e4b151e7e72eab79eed9a6dc49224fe"
+    },
+    {
+      "path": "evidence/A/STAGE5_SUMMARY.md",
+      "bytes": 3037,
+      "sha256": "a28b3ce4eb86e36e8d8eb1370f1cc3bb0eb33dcf30a0c7f6ca91dbb4876d7023"
+    },
+    {
+      "path": "evidence/A/STAGE_SUMMARY.md",
+      "bytes": 14326,
+      "sha256": "d947e5d23101a88d19dbe01536314ec10c4429b463476d369df9880dfd7c26d2"
+    },
+    {
+      "path": "evidence/A/V24_VAL600_CELL_STATUS.json",
+      "bytes": 2318,
+      "sha256": "81aaf6fba139be0d769aa9cd7510016c0207b23fdfd8494b33a8f28b1ab6c8d8"
+    },
+    {
+      "path": "evidence/B/B11_REPORT.md",
+      "bytes": 6136,
+      "sha256": "50383c613c3bffea46ed4ae38556d19a87431dd47cc975c7c7c67e43e4675f97"
+    },
+    {
+      "path": "evidence/B/B14_REPORT.md",
+      "bytes": 6837,
+      "sha256": "c5e1ef0b9a76520c73b311fbe9591f3d295560b76d42c244c7f06c28c0e39277"
+    },
+    {
+      "path": "evidence/B/B16_REPORT.md",
+      "bytes": 6002,
+      "sha256": "e5b06d36a7e1fcff65243c90e5aae66deb4e2820c303ef0153ee76f365dd5be3"
+    },
+    {
+      "path": "evidence/B/B16_SUMMARY.json",
+      "bytes": 1904,
+      "sha256": "fe982e87cbb1500c3f7ce83a9136dc9cbec8bc7358873c9c089000e2f4832bc2"
+    },
+    {
+      "path": "evidence/B/B17_REPORT.md",
+      "bytes": 3472,
+      "sha256": "068fbcc93ca855583f73773f47ca5cbfee37dcdbeae19ef361c2dc27310e3c78"
+    },
+    {
+      "path": "evidence/B/B17_SUMMARY.json",
+      "bytes": 2857,
+      "sha256": "9f8fafbbda8e61429f5286ee66d666de62ab79172521262041fb08c797a46bbe"
+    },
+    {
+      "path": "evidence/B/CAL64_DATA_ROLES.json",
+      "bytes": 6166,
+      "sha256": "b14db85dc71b47525dd002f18fc7a74d23f81a770bb60ba8c485b059183462b6"
+    },
+    {
+      "path": "evidence/B/CROSSLINE_DOUBLE_COLOR_EVIDENCE.json",
+      "bytes": 3609,
+      "sha256": "09e70180f33a5d2379414d38d72457cd8f5c00ddfe0f2b7127482b7b55e8b0de"
+    },
+    {
+      "path": "evidence/B/NEXT_TASK_QUEUE.json",
+      "bytes": 14773,
+      "sha256": "81e0bac34c0fef3162f2a1a6601c2292c2e2274aa3900b7483e848fff13f2f9c"
+    },
+    {
+      "path": "evidence/B/STAGE_SUMMARY.md",
+      "bytes": 10570,
+      "sha256": "39f9f2714da8e92b2fa10f6f59249320a427cb5fad94623a2597f9e8e029f2cd"
+    },
+    {
+      "path": "evidence/C/01-static-interface-audit.md",
+      "bytes": 11023,
+      "sha256": "47de55b082f0654828e427f850e703d4e85953725b8c2d9c59ca4bde27275aba"
+    },
+    {
+      "path": "evidence/C/BOARD_READONLY_PREFLIGHT_RESULT.json",
+      "bytes": 5349,
+      "sha256": "e2a89aefdeafcbd380ca4af5d17740ab89ec45bdf653fe838ce81eb76528a15f"
+    },
+    {
+      "path": "evidence/C/BOARD_READONLY_PREFLIGHT_STAGE.md",
+      "bytes": 2209,
+      "sha256": "580dafb61b36dd387689b2ebed0db5ff6b96e88580eef09105ff3b6388a4ee32"
+    },
+    {
+      "path": "evidence/C/BOARD_SERIAL_TEMP_ADDR_SSH_COLLECT.md",
+      "bytes": 1650,
+      "sha256": "47f68fc0f09e20ae65ae7f0556cd42929c5699668d3569ca299e7c01c0724cd0"
+    },
+    {
+      "path": "evidence/C/BOARD_SERIAL_TEMP_ADDR_SSH_CONTRACT.json",
+      "bytes": 6114,
+      "sha256": "7612b6311b5848575dc04062e3f551909a5e1da50e2650394e060786327dcf97"
+    },
+    {
+      "path": "evidence/C/BOARD_SERIAL_TEMP_ADDR_SSH_HOSTKEY_FPS.json",
+      "bytes": 1192,
+      "sha256": "629a9450d175a1eb1bdf432d06881063f6a8ac5ee26e3ec63c594f3d1c108a9c"
+    },
+    {
+      "path": "evidence/C/BOARD_SERIAL_TEMP_ADDR_SSH_RESULT.json",
+      "bytes": 5915,
+      "sha256": "430d393a3ebb3cd603084bbfbc192438bf9a7bf19d76ee6144034bfc115c0664"
+    },
+    {
+      "path": "evidence/C/BOARD_SERIAL_TEMP_ADDR_SSH_STAGE.md",
+      "bytes": 4051,
+      "sha256": "b4cbc219522711739b9fc814b5cac74bfed5dc4036ed2359f2f20478d42bdb56"
+    },
+    {
+      "path": "evidence/C/BOARD_SSH_READONLY_CONTRACT.json",
+      "bytes": 4746,
+      "sha256": "e0ad0d7b539399e23513db9b1ad01a59343a25d9a2391ada9a87e41d59ed4ccb"
+    },
+    {
+      "path": "evidence/C/BOARD_SSH_READONLY_RESULT.json",
+      "bytes": 5751,
+      "sha256": "c2676638c6e655a94b1ffa38934e136a3ac31e6c8c8c2ec08a65ec790c716208"
+    },
+    {
+      "path": "evidence/C/CLOUD_NUMEL3_GUARD_REGISTRATION.json",
+      "bytes": 3160,
+      "sha256": "bbb17080833137ac549b5e7f6cbeec287d05394703c75d57ed626097024e4e75"
+    },
+    {
+      "path": "evidence/C/COLOR_PREPROCESS_PIXELCOMPARE_CONTRACT.json",
+      "bytes": 4198,
+      "sha256": "5e01c375d062d1e9c3edcf5ef57364df7f886d2d201eadb24e66906e28db3a9b"
+    },
+    {
+      "path": "evidence/C/COLOR_PREPROCESS_POLICY_PROPOSAL.json",
+      "bytes": 8298,
+      "sha256": "fc048816d123874e3f3cf5c13f62d1e0c62251ac2e81de69077830364ad03502"
+    },
+    {
+      "path": "evidence/C/CONTRACT_MERGE_STAGE.md",
+      "bytes": 3328,
+      "sha256": "c8bb9c900463a66820ccc54f68625798da8292eaebb26246aa933a30c21ff7c0"
+    },
+    {
+      "path": "evidence/C/ERRATA_STATIC_AUDIT_LINE96.md",
+      "bytes": 1792,
+      "sha256": "13acf10eaef6b93706f62c0a84a41a9c7eeb759ca578516bb878b6fafb4a25fd"
+    },
+    {
+      "path": "evidence/C/ERRATUM_01M7KKBRVQJ1MWYQ8YEHQEYSMG.md",
+      "bytes": 11011,
+      "sha256": "489418725edfcba277a4fd82d0ff18ffbfc1080f6d45131ae1ebff6ae0aadfa7"
+    },
+    {
+      "path": "evidence/C/IF006_FIRST_RUN_REPORT.md",
+      "bytes": 3802,
+      "sha256": "0600dd260f3c2b8109911aac9f42c0834084c947668ac2141c5271e05fdd68e2"
+    },
+    {
+      "path": "evidence/C/IF006_GEOMETRY_EXECUTED.md",
+      "bytes": 3844,
+      "sha256": "c55f02a163dacbb658290555605ee2d040ec7206c5499acab419fa4708c1acfe"
+    },
+    {
+      "path": "evidence/C/IF007_CONTRACT.md",
+      "bytes": 3070,
+      "sha256": "a36361a061122263abd929609b08e28b8d272b7b8ee242c7e042a7c289bf0bbc"
+    },
+    {
+      "path": "evidence/C/IF007_RESULT.md",
+      "bytes": 5855,
+      "sha256": "a98a671fa927fe8d6164954d3ce0843e694c7dc39d2762011fd7af6c54a9e5d9"
+    },
+    {
+      "path": "evidence/C/MODEL_INPUT_BINDING_MATRIX.json",
+      "bytes": 6301,
+      "sha256": "771618eeed5aa58e8693d0ac48c543c9b123c8bcf594488f1efdb0a349bcd1d0"
+    },
+    {
+      "path": "evidence/C/NEXT_TASK_QUEUE.json",
+      "bytes": 34678,
+      "sha256": "811987ccc41ed79a86f3c69c9caff3926ac871f2b075ca7be62330776be23fe4"
+    },
+    {
+      "path": "evidence/C/PREPROCESS_FIXTURE_HANDOFF.md",
+      "bytes": 2710,
+      "sha256": "f52a267e3e1aae81093b4f892ddd07b9f8c9054a8c62b8f7cd33ef13d8665085"
+    },
+    {
+      "path": "evidence/C/SAFE_BOARD_SCOPE.json",
+      "bytes": 7709,
+      "sha256": "225a5cc8fdbd192a0227052c879418c02aa6912830ed1e0290c3feb823a6c18d"
+    },
+    {
+      "path": "evidence/C/STAGE_SUMMARY.md",
+      "bytes": 8514,
+      "sha256": "6c89c332d16058b0261ecb7af1797576559bbd0d0af851cf398f33a1ef8cfe2c"
+    },
+    {
+      "path": "evidence/EVIDENCE_COPY_LEDGER.json",
+      "bytes": 32429,
+      "sha256": "722acdb00f2235be864550716a334dd7480d02f67e3bd3fd17c1db336bdfe9a1"
+    },
+    {
+      "path": "evidence/docs/cn_val_su_eval_report.md",
+      "bytes": 17296,
+      "sha256": "e58658a64ec1a48a5d04d91c346521da5faeddeb55e6f2b0c1bdc57a74f05df7"
+    },
+    {
+      "path": "evidence/docs/ipc_overseas_anpr_face_README.md",
+      "bytes": 2112,
+      "sha256": "304c0ee47fef11fb16ea6b19b35e3b8012ce243d93bfcf41ee5102217a1161a2"
+    },
+    {
+      "path": "evidence/docs/overseas_anpr_face_plan.md",
+      "bytes": 36903,
+      "sha256": "29e7c90a56791139d3aef4c9d4d8b4e7ffd616015ca5dddb71e3edd6f1a1e643"
+    },
+    {
+      "path": "evidence/docs/special_plate_data_plan.md",
+      "bytes": 6714,
+      "sha256": "f1658edcaa09d073e5bac5ffc001bd961580e738bd0d77645faa5bfd5cbabcca"
+    },
+    {
+      "path": "evidence/docs/special_plate_data_plan_zh.md",
+      "bytes": 6714,
+      "sha256": "f1658edcaa09d073e5bac5ffc001bd961580e738bd0d77645faa5bfd5cbabcca"
+    },
+    {
+      "path": "evidence/docs/special_train_report.md",
+      "bytes": 62299,
+      "sha256": "526c452651901859048944adb7aeb6f422044026d6d59c04de1be3da49ebe93d"
+    },
+    {
+      "path": "evidence/handoff/APPLY_MANIFEST.json",
+      "bytes": 10515,
+      "sha256": "5ac5917193846675c6697160cbbb2fc0f99109f948bfb8c089b69cd2285b2343"
+    },
+    {
+      "path": "evidence/handoff/CLOUD_HANDOFF.md",
+      "bytes": 4981,
+      "sha256": "039b37f51d1ff42eb479fa2e35903039516ab2a12b45c66c0645e8949ee0e242"
+    },
+    {
+      "path": "evidence/handoff/R40_INTEGRATION_EXACT.diff",
+      "bytes": 12871,
+      "sha256": "4eaac6ac5248029b14853ac84fc84400a6550dcd6a820bb43bba5ebda328970a"
+    },
+    {
+      "path": "evidence/handoff/R46_MINIMAL_DERIVED_FORMAT_FIX.diff",
+      "bytes": 3364,
+      "sha256": "2b6d511bec7d5b46e1af7415fa973de9347d1e74248cdd8a7bcd25602766b470"
+    },
+    {
+      "path": "evidence/handoff/SHA256SUMS.txt",
+      "bytes": 555,
+      "sha256": "f4e5f465986d2e174ac8368f0e991840ec03a68de680ebffa03eba27111c4b85"
+    },
+    {
+      "path": "evidence/handoff/src_approved_special_format.inc",
+      "bytes": 1778,
+      "sha256": "6cf14ec7b6f74e2c178816d3d35fd7fb244dada418fac8393165a0bb560f7c5b"
+    },
+    {
+      "path": "evidence/handoff/src_color5_crop_policy.inc",
+      "bytes": 728,
+      "sha256": "49508bca5c1f6abc323695f452d0a49205103d73dad57c09e2e7a4bd5858c1b6"
+    },
+    {
+      "path": "evidence/indexes/delivery_NEXT_TASK_QUEUE.json",
+      "bytes": 16902,
+      "sha256": "428067a526a3d986828443b2dbb75aab97a5237fec66386eaf9b8fdfd4c4dbf4"
+    },
+    {
+      "path": "evidence/indexes/delivery_README_INDEX.md",
+      "bytes": 19993,
+      "sha256": "e836c96d48bd9831acb776251ef47a51b63f5dcc534d9ece1d869f6bf1b13cbf"
+    },
+    {
+      "path": "evidence/indexes/optimization_rounds_title_index.tsv",
+      "bytes": 8531,
+      "sha256": "de9f4f92e905a93b2a3e9efb8970d73e91aabfd61d3baec16715e7f1a640aef2"
+    },
+    {
+      "path": "scripts/check_handoff.py",
+      "bytes": 3809,
+      "sha256": "cee827648f915bb9aa798bc5b947ab80b291f47e18cdd169aeb8b89072ef82a5"
+    }
+  ],
+  "submission_note": "GIT_SUBMISSION.md and the README remote-verification sentence were added when the package was committed. Evidence copy hashes are unchanged. This manifest does not store the git commit SHA."
+}

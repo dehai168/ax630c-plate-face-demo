@@ -1,0 +1,351 @@
+{
+  "generated_at": "2026-11-17T09:38:19+08:00",
+  "timezone": "Asia/Shanghai (UTC+8)",
+  "role": "Root path index, cross-workflow dependencies, and parent-relayed stage status only. A/B measured artifacts are not re-verified here and their files were not modified. Cited A/B directions are parent-reported current work, not release-gate passes.",
+  "workflow_directories": {
+    "A": "A/",
+    "B": "B/",
+    "C": "C/"
+  },
+  "line_queue_paths": {
+    "A": "A/NEXT_TASK_QUEUE.json",
+    "B": "B/NEXT_TASK_QUEUE.json",
+    "C": "C/NEXT_TASK_QUEUE.json"
+  },
+  "line_expected_files": {
+    "A": [
+      "A/ARTIFACT_INDEX.json",
+      "A/BASELINE_COMPARISON.json",
+      "A/NEXT_TASK_QUEUE.json",
+      "A/STAGE_SUMMARY.md"
+    ],
+    "B": [
+      "B/ARTIFACT_INDEX.json",
+      "B/BASELINE_COMPARISON.json",
+      "B/NEXT_TASK_QUEUE.json",
+      "B/STAGE_SUMMARY.md"
+    ],
+    "C": [
+      "C/ARTIFACT_INDEX.json",
+      "C/BASELINE_COMPARISON.json",
+      "C/SAFE_BOARD_SCOPE.json",
+      "C/NEXT_TASK_QUEUE.json",
+      "C/STAGE_SUMMARY.md",
+      "C/HANDOFF/CLOUD_HANDOFF.md",
+      "C/HANDOFF/APPLY_MANIFEST.json",
+      "C/HANDOFF/R40_INTEGRATION_EXACT.diff",
+      "C/HANDOFF/R46_MINIMAL_DERIVED_FORMAT_FIX.diff",
+      "C/ERRATA_STATIC_AUDIT_LINE96.md",
+      "C/INTERFACE_CONSISTENCY_EVIDENCE.json",
+      "C/NEXT_EXPERIMENT_PROPOSAL.json",
+      "C/INTERFACE_CONSISTENCY_STAGE.md",
+      "C/CLOUD_NUMEL3_GUARD_REGISTRATION.json",
+      "C/MODEL_INPUT_BINDING_MATRIX.json",
+      "C/COLOR_PREPROCESS_POLICY_PROPOSAL.json",
+      "C/CONTRACT_MERGE_STAGE.md",
+      "C/COLOR_PREPROCESS_PIXELCOMPARE_CONTRACT.json",
+      "C/PREPROCESS_FIXTURE_HANDOFF.md",
+      "C/AUDIT_EVIDENCE/01-static-interface-audit.md",
+      "C/AUDIT_EVIDENCE/ERRATUM_01M7KKBRVQJ1MWYQ8YEHQEYSMG.md",
+      "C/AUDIT_EVIDENCE/SOURCE_AND_SHA256SUMS.md",
+      "C/IF006_EVIDENCE/FIRST_RUN_REPORT.md",
+      "C/AUDIT_AND_IF006_EVIDENCE_INDEX.json",
+      "C/IF006_EVIDENCE/GEOMETRY_EXECUTED.md",
+      "C/IF007_EVIDENCE/RESULT.md",
+      "C/IF007_EVIDENCE/CONTRACT.md",
+      "C/BOARD_READONLY_PREFLIGHT_CONTRACT.json",
+      "C/BOARD_READONLY_PREFLIGHT_RESULT.json",
+      "C/BOARD_READONLY_PREFLIGHT_STAGE.md"
+    ]
+  },
+  "existence_at_root_index_write_time": "This index records paths only. Presence or absence of A/ or B/ files must be checked on disk; missing files are not evidence those workflows failed, and existing paths are not evidence their gates passed.",
+  "cross_line_dependencies": [
+    {
+      "id": "REL-ALL",
+      "priority": 1,
+      "dependencies": [
+        "workflow_A_ocr_gates",
+        "workflow_B_CAL64_and_color_rules",
+        "workflow_C_four_levels"
+      ],
+      "ready": false,
+      "blocker": "All release gates remain unpassed. Board complete video is not done. This root file cites parent-reported A/B current directions but does not restate their files as gate passes.",
+      "next_action": "Project remains IN_PROGRESS. A/B are external dependencies (see their files; do not re-ping the user). C live-board reads are blocked on a safe channel. Do not lower gates.",
+      "gate": "Do not lower thresholds. Do not mark untested items as passed. Keep production v2.4 rollback-ready.",
+      "evidence": [
+        "README_INDEX.md",
+        "A/NEXT_TASK_QUEUE.json",
+        "B/NEXT_TASK_QUEUE.json",
+        "C/NEXT_TASK_QUEUE.json"
+      ]
+    },
+    {
+      "id": "C_INDEPENDENT_OF_AB_FOR_BRANCH_AND_OFFLINE_ENGINEERING",
+      "priority": 1,
+      "dependencies": [],
+      "ready": false,
+      "blocker": null,
+      "next_action": "C does not wait for A/B. Mock and preflight are registered. Do not open COM3. C-PF-002 waits on a proven safe channel. Not NPU. Not idle as a whole project.",
+      "gate": "No production merge, no board write, no new model inference in the first follow-up.",
+      "evidence": [
+        "C/NEXT_TASK_QUEUE.json",
+        "C/NEXT_TASK_QUEUE.json item C-AUD-001",
+        "C/INTERFACE_CONSISTENCY_STAGE.md",
+        "C/NEXT_TASK_QUEUE.json item C-IF-001",
+        "C/CONTRACT_MERGE_STAGE.md",
+        "C/CLOUD_NUMEL3_GUARD_REGISTRATION.json",
+        "C/NEXT_TASK_QUEUE.json item C-IF-004",
+        "C/PREPROCESS_FIXTURE_HANDOFF.md",
+        "/cursor/stores/store-c5bcaa91-b7a1-451f-aa70-1f3949024884/v25-c-preprocess-fixtures/",
+        "C/NEXT_TASK_QUEUE.json item C-IF-006",
+        "C/IF006_EVIDENCE/README.md",
+        "C/IF006_EVIDENCE/GEOMETRY_EXECUTED.md",
+        "C/NEXT_TASK_QUEUE.json item C-IF-007",
+        "C/BOARD_READONLY_PREFLIGHT_STAGE.md",
+        "C/IF007_EVIDENCE/RESULT.md"
+      ]
+    },
+    {
+      "id": "C_COLOR5_NPU_AND_REAL_VIDEO_DEPENDS_ON_B",
+      "priority": 2,
+      "dependencies": [
+        "workflow_B_CAL64_pass_on_an_admitted_candidate"
+      ],
+      "ready": false,
+      "blocker": "C must not synonymous-rerun the already-failed color5 artifact as if it were a new candidate. B results are not claimed here.",
+      "next_action": "B first-batch delivery and student-ONNX 64-CPU drift work (parent-reported) do not by themselves unblock C NPU/video acceptance. Wait for a candidate that meets original CAL64 gates.",
+      "gate": "Original CAL64 and C numeric/video gates unchanged.",
+      "evidence": [
+        "C/NEXT_TASK_QUEUE.json item C-NPU-001",
+        "B/NEXT_TASK_QUEUE.json"
+      ]
+    },
+    {
+      "id": "C_PRODUCTION_REC_VIDEO_DEPENDS_ON_A_IF_REC_CHANGES",
+      "priority": 2,
+      "dependencies": [
+        "workflow_A_ocr_same_caliber_candidate_if_recognizer_changes"
+      ],
+      "ready": false,
+      "blocker": "A results are not claimed here.",
+      "next_action": "A phase-2 delivery and the directed R34-R44 identity precheck / conditional frozen 600x6 software comparison (parent-reported) proceed in parallel with C. Do not mix caliber. Board complete video remains not done.",
+      "gate": "Same-caliber full-frame OCR must not be sacrificed for a local class gain.",
+      "evidence": [
+        "A/NEXT_TASK_QUEUE.json",
+        "C/NEXT_TASK_QUEUE.json item C-VID-001"
+      ]
+    }
+  ],
+  "c_line_status": {
+    "updated_at": "2026-11-17T11:38:26+08:00",
+    "timezone": "Asia/Shanghai (UTC+8)",
+    "in_progress": false,
+    "queue_is_idle": true,
+    "C-AUD-001": {
+      "status": "DONE_STATIC_WITH_ERRATUM",
+      "do_not_rerun": true,
+      "original": "C/AUDIT_EVIDENCE/01-static-interface-audit.md",
+      "original_sha256": "47de55b082f0654828e427f850e703d4e85953725b8c2d9c59ca4bde27275aba",
+      "original_wc_l_measured": 103,
+      "parent_described_as_104_lines": true,
+      "erratum": "C/AUDIT_EVIDENCE/ERRATUM_01M7KKBRVQJ1MWYQ8YEHQEYSMG.md",
+      "not_claimed": [
+        "NPU actual inference",
+        "board complete video",
+        "production acceptance"
+      ]
+    },
+    "C-IF-006": {
+      "status": "DONE_OFFLINE_GEOMETRY_42_U8_F32_NON_NPU",
+      "attribution": "parent_relay of cloud run 6; not a local rerun",
+      "report": "C/IF006_EVIDENCE/GEOMETRY_EXECUTED.md",
+      "report_sha256": "c55f02a163dacbb658290555605ee2d040ec7206c5499acab419fa4708c1acfe",
+      "first_run_retained": "NOT_RUN_DEPENDENCY (not pixel FAIL, not a fail-then-retry story)",
+      "u8": "42/42 pixel and PNG SHA (double 21, single 21, SU 0)",
+      "f32": "42/42 CHW SHA, max ULP 0, BGR NCHW u8/255; not ORT-linked",
+      "npu": false,
+      "opencv": "cloud 4.6.0 vs fixture-gen 5.0.0; interpolation unchanged",
+      "helper_sha256": "2906c185fc124ee76f905f9f208a418f6719b925b92eed91a330efe341560c09",
+      "code_commit": "2241e28c110f8a10b282619459743964e8b79d4e",
+      "negative_control_raw96_double": "21 images, 9183-9216 differing pixels, recorded only",
+      "still_open": [
+        "SU",
+        "online layer decision"
+      ],
+      "parent_already_delivered_to_user": true
+    },
+    "C-IF-007": {
+      "status": "DONE_OFFLINE_ACTUAL_FUNCTION_MOCK_ONLY",
+      "attribution": "parent_relay, already delivered to the user; archived not rerun",
+      "report": "C/IF007_EVIDENCE/RESULT.md",
+      "report_sha256": "a98a671fa927fe8d6164954d3ce0843e694c7dc39d2762011fd7af6c54a9e5d9",
+      "assertions": "52 PASS",
+      "not_claimed": [
+        "model",
+        "NPU",
+        "runtime",
+        "video"
+      ]
+    },
+    "C-PF-001": {
+      "status": "COMPLETED_PREFLIGHT_NO_SAFE_READONLY_CHANNEL",
+      "contract": "C/BOARD_READONLY_PREFLIGHT_CONTRACT.json",
+      "result": "C/BOARD_READONLY_PREFLIGHT_RESULT.json",
+      "current_COM3_present_same_Prolific_InstanceId_as_R34": true,
+      "no_bridge_process_or_whitelist_script": true,
+      "serial_not_opened": true,
+      "p14_errors_count_current": "UNKNOWN_NOT_MEASURED",
+      "historical_2168_not_current": true
+    },
+    "C-PF-002": {
+      "status": "BLOCKED_NO_PROVEN_SAFE_CHANNEL",
+      "serial_not_full_line_blocker": true,
+      "note": "Serial path unchanged and still unused. Full-line next dependency is C-PF-SSH-001 reachability, not serial physical confirmation."
+    },
+    "not_claimed": [
+      "NPU actual inference",
+      "SSH authenticated session",
+      "production acceptance",
+      "release pass"
+    ],
+    "next": "Existing SSH listener if SSH health is still required. Do not start sshd here. Do not auto-rollback the working temp address. Do not overwrite A/B.",
+    "note": "C status only. a_line_status and b_line_status were not overwritten.",
+    "active_task_dispatch_confirmed": null,
+    "current_status": "COMPLETED_TEMP_ADDR_ADDED_NO_SSH_LISTENER",
+    "if007_status": "DONE_OFFLINE_ACTUAL_FUNCTION_MOCK_ONLY_52_ASSERTIONS",
+    "current_board_observation": "RAM address 192.168.151.200/24 added on eth0; 10.100.100.101 and default route kept; ICMP reachable from level; no TCP/22 listener; p14 errors_count measured now 2168; serial used, no reboot, no persistent writes.",
+    "C-PF-SSH-001": {
+      "status": "BLOCKED_NO_REACHABLE_EXISTING_SSH",
+      "contract": "C/BOARD_SSH_READONLY_CONTRACT.json",
+      "contract_sha256": "e0ad0d7b539399e23513db9b1ad01a59343a25d9a2391ada9a87e41d59ed4ccb",
+      "result": "C/BOARD_SSH_READONLY_RESULT.json",
+      "result_sha256": "c2676638c6e655a94b1ffa38934e136a3ac31e6c8c8c2ec08a65ec790c716208",
+      "stage": "C/BOARD_SSH_READONLY_STAGE.md",
+      "single_target": "10.100.100.101:22",
+      "target_classification": "LAST_DOCUMENTED_NOT_PROVEN_CURRENT",
+      "icmp": false,
+      "tcp_22": false,
+      "ssh_login_attempted": false,
+      "ssh_auth_succeeded": false,
+      "health_checks": "NOT_MEASURED",
+      "historical_2168_not_current": true,
+      "serial_opened": false,
+      "cancels_serial_as_full_line_blocker": true
+    },
+    "C-PF-SSH-002": {
+      "status": "COMPLETED_TEMP_ADDR_ADDED_NO_SSH_LISTENER",
+      "contract": "C/BOARD_SERIAL_TEMP_ADDR_SSH_CONTRACT.json",
+      "contract_sha256": "7612b6311b5848575dc04062e3f551909a5e1da50e2650394e060786327dcf97",
+      "result": "C/BOARD_SERIAL_TEMP_ADDR_SSH_RESULT.json",
+      "result_sha256": "430d393a3ebb3cd603084bbfbc192438bf9a7bf19d76ee6144034bfc115c0664",
+      "temp_address": "192.168.151.200/24",
+      "original_ip_retained": "10.100.100.101/24",
+      "default_route_retained": "default via 10.100.100.1 dev eth0",
+      "icmp_to_200": true,
+      "tcp_22": false,
+      "ssh_auth_succeeded": false,
+      "ext4_errors_count_p14_measured_now": 2168,
+      "ext4_errors_count_p13_measured_now": 0,
+      "persistent_board_writes": false,
+      "rollback_recorded_not_executed": "ip addr del 192.168.151.200/24 dev eth0",
+      "not_a_release_pass": true
+    }
+  },
+  "updated_at": "2026-11-17T11:38:26+08:00",
+  "parent_reported_line_directions": {
+    "updated_at": "2026-11-17T09:46:25+08:00",
+    "attribution": "Parent task statement to this registrar. Not a local re-run or re-verification of A/B artifacts.",
+    "A": {
+      "phase2": "delivered (parent-reported)",
+      "current": "Off-board rec production-identity precheck over R34-R44 evidence. If identity is sufficient, one frozen 600x6 software comparison.",
+      "queue_path": "A/NEXT_TASK_QUEUE.json",
+      "not_claimed": "OCR release gate pass or same-caliber production replacement.",
+      "see_files": [
+        "A/NEXT_TASK_QUEUE.json",
+        "A/STAGE_SUMMARY.md",
+        "A/stage5_tta_isolated_cpu_latency_20261117/STAGE5_SUMMARY.md"
+      ],
+      "note": "See A files. Previously reported: production float chain missing; software cost measurements complete. Not restated as a new result here."
+    },
+    "B": {
+      "first_batch": "delivered (parent-reported)",
+      "current": "Student ONNX 64-CPU drift vs quantization separation work exists; bound 2 CPU / 2 GiB / 120 s.",
+      "queue_path": "B/NEXT_TASK_QUEUE.json",
+      "not_claimed": "Original CAL64 gates passed (max abs <= 0.03, mean abs <= 0.005, argmax 64/64).",
+      "see_files": [
+        "B/NEXT_TASK_QUEUE.json",
+        "B/B17/REPORT.md",
+        "B/B17/SUMMARY.json"
+      ],
+      "note": "See B files. Root b_line_status was not overwritten in this correction. B17 already recorded a CLI diagnostic 0/64 with no output."
+    },
+    "C": {
+      "queue_path": "C/NEXT_TASK_QUEUE.json",
+      "static_replay": "cloud-reported complete on independent branch; not NPU/video/production",
+      "current": "C-IF-007 DONE_OFFLINE_ACTUAL_FUNCTION_MOCK_ONLY (not NPU). C-PF-001 preflight complete: COM3 present, no proven safe no-DTR/RTS channel, serial not opened, 2168 not remeasured. C-PF-002 blocked. 2241e28 untouched.",
+      "interface_stage": "C/INTERFACE_CONSISTENCY_STAGE.md",
+      "contract_merge": "C/CONTRACT_MERGE_STAGE.md",
+      "cloud_numel3": "C/CLOUD_NUMEL3_GUARD_REGISTRATION.json",
+      "fixture_handoff": "C/PREPROCESS_FIXTURE_HANDOFF.md",
+      "audit_evidence": "C/AUDIT_EVIDENCE/",
+      "if006_evidence": "C/IF006_EVIDENCE/",
+      "if006_executed": "C/IF006_EVIDENCE/GEOMETRY_EXECUTED.md",
+      "if007": "C/IF007_EVIDENCE/RESULT.md",
+      "preflight": "C/BOARD_READONLY_PREFLIGHT_STAGE.md"
+    }
+  },
+  "release_status": {
+    "updated_at": "2026-11-17T09:46:25+08:00",
+    "all_release_gates_passed": false,
+    "board_complete_video": "NOT_DONE",
+    "production_v24_rollback_required": true,
+    "note": "Static source-patch success must not be written as NPU or production acceptance."
+  },
+  "a_line_status": {
+    "updated_at": "2026-11-17T09:58:20+08:00",
+    "timezone": "Asia/Shanghai (UTC+8)",
+    "attribution": "Workflow A self-report of stage-5 delivery. Not a re-verification of B or C, and not a release-gate pass.",
+    "stage5": "delivered: isolated box x86 ORT CPU original-view vs locked 6-view TTA timing on accepted ONNX 45b005 and frozen val600",
+    "decision": "ACCEPT_MEASUREMENT_REPRODUCIBILITY only (not model or release acceptance; not NPU/board/full-frame; not theoretical 6x)",
+    "queue": "A/NEXT_TASK_QUEUE.json",
+    "stage_dir": "A/stage5_tta_isolated_cpu_latency_20261117/",
+    "summary": "A/stage5_tta_isolated_cpu_latency_20261117/STAGE5_SUMMARY.md",
+    "a_independent_auto_executable_items_exhausted": true,
+    "still_open": {
+      "production_val600_prefix_tta_cell": "UNKNOWN, waiting official float correspondence; do not rescan identity",
+      "board_or_NPU_TTA_and_prefix_latency": "UNMEASURED, handoff to C",
+      "six_vs_nine_branch_only": "optional-branch GT gap"
+    }
+  },
+  "b_line_status": {
+    "updated_at": "2026-11-17T10:12:34.773758+08:00",
+    "attribution": "B17oncepublicCLI diagnostic; noA/Cstatuschange",
+    "report": "B/B17/REPORT.md",
+    "summary": "B/B17/SUMMARY.json",
+    "queue": "B/NEXT_TASK_QUEUE.json",
+    "crossline_C_evidence": "B/B14/CROSSLINE_DOUBLE_COLOR_EVIDENCE.json",
+    "B17_help_CLI": 1,
+    "B17_model_CLI": 1,
+    "B17_completed_cases": 0,
+    "B17_actual_failure": "NoneType.hardware_type inONNXsessionconstruction; stoppednoretry",
+    "original_CAL64_status": "REJECTED_UNCHANGED",
+    "next_gap": "OfficialsupportedONNXrun usage/versionstatement; preobservercaptureremainsseparategap",
+    "user_data_required_now": false
+  },
+  "project_status": "BLOCKED_EXTERNAL_DEPENDENCIES",
+  "queue_is_idle": true,
+  "active_work": [],
+  "parent_reconciled_at": "2026-11-17T10:27:53.926254+08:00",
+  "external_dependencies_current": {
+    "A": "Production rec 728d8f20 official existing float/export provenance",
+    "B": "Supported official V8 float debug command or correction after B17 session construction failure; no retry",
+    "C": "Temporary 192.168.151.200/24 is in RAM and ICMP-reachable from level; original 10.100.100.101 and default route retained; TCP/22 is not listening. Do not start sshd from C. Rollback command recorded, not executed."
+  },
+  "project_status_detail": {
+    "updated_at": "2026-11-17T11:38:26+08:00",
+    "timezone": "Asia/Shanghai (UTC+8)",
+    "state": "BLOCKED_EXTERNAL_DEPENDENCIES",
+    "reason": "C-PF-SSH-002 finished: temp 192.168.151.200 added and reachable, but no existing SSH listener (sshd not started). No C worker remains active. A/B file-cited dependencies unchanged.",
+    "queue_is_idle": true
+  }
+}

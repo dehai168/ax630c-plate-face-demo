@@ -1,0 +1,64 @@
+{
+  "workflow": "C",
+  "id": "C-PF-SSH-002",
+  "title": "经串口为已存在以太网增加 151 网段临时地址以建立 SSH",
+  "kind": "complete_ten_fields_single_hypothesis",
+  "generated_at": "2026-11-17T11:30:19+08:00",
+  "timezone": "Asia/Shanghai (UTC+8)",
+  "authorization": {
+    "user_at": "2026-11-17T11:27+08:00",
+    "scope": "Normal use of existing COM3 and a temporary board network address change. Not an authorization to reboot, repair, or modify production files.",
+    "parent_constraints": "Inspect current network first; add 192.168.151.x only after no-conflict confirmation; not persistent; no reboot; network change may briefly affect connectivity. Do not deliberately pulse DTR/RTS, send break, or reset. Serial physical-confirmation gate is not an absolute blocker for this authorized operation."
+  },
+  "ten_fields": {
+    "1_question": "在已授权使用现有 COM3（115200/8N1，open 前 DtrEnable=false / RtsEnable=false / Handshake=None，不故意脉冲/break/reset）的前提下，能否在确认身份与地址无冲突后，仅用内核 RAM 接口为已存在以太网增加一个合适的 192.168.151.x/24 临时地址（优先评估历史 192.168.151.200），从而从 machine level 建立 SSH 只读健康检查，同时不改原持久配置、原 IP、MAC、link 状态与默认路由？",
+    "2_evidence": "用户 11:27 明确指令经串口修改一个 151.x 地址来连接。R43（2026-11-13T15:51:52–15:55:13+08:00）记录板卡 eth0=10.100.100.101/24、Windows 以太网 192.168.151.152/24。更早恢复曾临时使用 192.168.151.200。C-PF-SSH-001 于 2026-11-17T10:41:13+08:00 测得 level 仍为 192.168.151.152/24，对 10.100.100.101 ICMP/TCP22 均失败；known_hosts 无该主机。COM3 为 Prolific USB-to-Serial，与 R34 同一 InstanceId。R37/R38 曾记录当时无 sshd 监听；R47 仅证实板端存在 ssh/scp 客户端二进制。历史 p14 errors_count 2168 仅为历史。父已 Vault list kind=login，结果 No saved logins；不以该 metadata 断言用户从未提供过 root 密码。",
+    "3_hypothesis": "单假设：在当前地址与 MAC 已确认属于该 AX630C、且候选地址经有限 ARP/DAD/邻居检查确认未被占用（仅 ping 无回包不是无冲突证据）之后，对实际网卡执行一次最小 `ip addr add <address>/24 dev <actual_iface>`（已有则不重复），可以在不改原 IP/默认路由/持久配置的情况下，使 level 能经该临时 151 地址到达既有 SSH；本任务不启用或安装 sshd。",
+    "4_mechanism": "先冻结合同并登记 active。在 machine level 核对 COM3 占用后，用现有 .NET SerialPort（非通用会自动复位的终端工具）在 Open 之前设置 DTR/RTS/Handshake，独占打开，有限观察/回车确认 shell。优先使用仍已认证的会话，避免重复登录。只读采集 uptime、地址/链路/路由、真实 eth MAC、mounts、sysfs ext4 errors_count、SSH 22 监听。复核 PC 仍为 192.168.151.152/24 且不改 PC 网卡。候选最多 2 个，优先 192.168.151.200，但须确认其是否已属于本板，或不与 .1 网关/PC .152 及其他已用地址冲突。身份确认后才 add；冲突则只回退本轮新加地址。随后从 level 对该单目标做 TCP22 与 SSH；主机密钥从已核实串口 shell 读取并在内存校验，不 AutoAdd、不改全局 known_hosts、不关闭校验。",
+    "5_history_difference": "不是把串口物理确认当作绝对阻塞。不是重启/修复/改生产文件。不是启用 sshd。不是 flush/replace/network restart。不是全子网扫描。不是重跑 42/52 或启动 A/B 新实验。",
+    "6_data": "串口只读：uptime、ip addr/link/route（无 ip 则 ifconfig/route 只读）、eth MAC、/proc/mounts、已发现分区的 /sys/fs/ext4/*/errors_count、22 监听状态。SSH 只读（仅当已有监听且认证成功）：hostname、uname、uptime、mounts、errors_count。保留旧快照与新地址/回退命令（工作正常则不自动执行回退）。2168 不作为本次实测。",
+    "7_expected_improvement": "得到经授权临时 151 地址的实际连通事实，以及与历史 2168 分开的本次只读健康观察（若 SSH 或串口已读到）。",
+    "8_possible_degradation": "Open 时非故意的控制线变化导致复位；误加已占用地址；flush/覆盖原 IP 或默认路由；写 /etc 或启动项；擅自开启 sshd；把连通写成发布通过；密码进入日志/参数回显。",
+    "9_budget": "单次受控串口会话；候选最多 2 个；不在线安装板软件；不改 PC 网卡；不写板端持久文件；证据只写 box C。",
+    "10_success_failure_earlystop": "成功=身份确认后无冲突地加上临时地址（或已存在则不重复），原 IP/路由保留，并完成允许的只读检查；若原无 SSH 监听则如实报告、不开启。失败/早停=出现 boot 序列或异常 IO 立即停止且不代为重启；新 IO error 停止进一步负荷；地址冲突只回退本轮新加地址；缺可用安全认证通道则报告精确缺项，不猜密码、不从秘密文件搜取、不因 Vault 无记录断言密码从未给过。审批拒绝不绕过。"
+  },
+  "serial": {
+    "machineId": "697781b2-8ff0-4a80-a5ef-b65276461177",
+    "machine_label": "level",
+    "port": "COM3",
+    "settings": "115200/8N1",
+    "before_open": "DtrEnable=false, RtsEnable=false, Handshake=None",
+    "forbid": [
+      "deliberate DTR/RTS pulse",
+      "break",
+      "reset",
+      "port scan",
+      "generic auto-reset terminal tools"
+    ]
+  },
+  "address_policy": {
+    "preferred_candidate": "192.168.151.200",
+    "max_candidates": 2,
+    "do_not_touch": [
+      "192.168.151.1",
+      "192.168.151.152"
+    ],
+    "add_command_shape": "ip addr add <address>/24 dev <actual_iface>",
+    "keep": [
+      "old IP",
+      "MAC",
+      "link state",
+      "default route"
+    ],
+    "not_allowed": [
+      "flush",
+      "replace",
+      "network restart",
+      "write /etc or /opt or startup",
+      "fsck",
+      "mount/remount",
+      "reboot",
+      "persist"
+    ]
+  }
+}

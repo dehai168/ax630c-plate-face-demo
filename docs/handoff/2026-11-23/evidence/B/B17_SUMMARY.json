@@ -1,0 +1,74 @@
+{
+  "task": "B17_once_public_ONNX_float_run",
+  "completed_Asia_Shanghai": "2026-11-17T10:12:34.772109+08:00",
+  "status": "PUBLIC_CLI_FAILED_STOPPED_NO_RETRY_WITNESS_REJECTED",
+  "help": {
+    "invocations": 1,
+    "exit_code": 0,
+    "wall_seconds": 19.654322850998142,
+    "ONNX_perlayer_flags_confirmed": true
+  },
+  "model_CLI": {
+    "invocations": 1,
+    "exit_code": 1,
+    "wall_seconds": 12.749588972998026,
+    "first_case": "CAL_0000",
+    "logged_case_starts": 0,
+    "completed_cases": 0,
+    "planned_max_cases": 64,
+    "output_raw_files": 0,
+    "failure": "AttributeError: 'NoneType' object has no attribute 'hardware_type'",
+    "trace_stage": "run.InferenceSession -> sim.__init__ -> gen at line215; before case loop"
+  },
+  "forward_accounting": {
+    "completed_sample_forwards": 0,
+    "sample_forward_count_inferred_from_trace_and_controlflow": 0,
+    "instrumented_internal_forward_counter": false,
+    "hidden_internal_kernel_activity": "Not instrumented; no claim about hiddenkernelcalls",
+    "extra_ORT_calls": 0,
+    "retry": 0,
+    "train": 0,
+    "quantization_build": 0,
+    "compile": 0,
+    "internal_API_calls": 0
+  },
+  "model_SHA256": "9c840305ea6f5cb439b78ac350c05cb2f1674357bb47652e34f2f9de83600827",
+  "all64_input_hashes_dtype_shape_finite_preverified": true,
+  "source_and_inputs_unchanged_after": true,
+  "original_proposal_text_and_hash_preserved": true,
+  "metrics": "UNAVAILABLE: nofloatoutput; not zeroerror. No comparison againstB11 possible.",
+  "scope_limit": "This proves this exactpublicCLI+originalstudent failed before cases; not a universal claim everyONNX/V8 fails, nor inference aboutpreobservernumerics.",
+  "resource": {
+    "CPU_affinity": [
+      0,
+      1
+    ],
+    "model_peak_sampled_tree_RSS_bytes": 630763520,
+    "help_peak_sampled_tree_RSS_bytes": 610533376,
+    "min_sampled_MemAvailable_bytes": 13321142272,
+    "total_CLI_wall_seconds": 32.40391182399617,
+    "model_CLI_wall_cap_seconds": 120,
+    "tree_RSS_cap_bytes": 2147483648,
+    "MemAvailable_reserve_bytes": 1073741824,
+    "PSI_used_to_stop": false,
+    "resource_stop": false,
+    "stage_elapsed_seconds_at_report": 146.9494216439998,
+    "stage_cap_seconds": 600
+  },
+  "original_CAL64": {
+    "Max": 0.04685291647911072,
+    "MAE": 0.005205561543925796,
+    "argmax": 63,
+    "n": 64,
+    "gates": {
+      "Max_le": 0.03,
+      "MAE_le": 0.005,
+      "argmax_equal": 64
+    },
+    "status": "REJECTED_UNCHANGED_INHERITED_NOT_RERUN"
+  },
+  "CAL64_SOURCE64_roles": "Calibration/search/debug/gate overlap remains; not independentholdout, no trainingloss/scale/selection reuse.",
+  "board_PC_repo_private_root_license_credentials_access": false,
+  "user_data_required_now": false,
+  "next": "Bpublicfloatentry branch waits officialsupportedusage/versionstatement; preobservergap separate. No newtrain/build; C/Acontinue."
+}

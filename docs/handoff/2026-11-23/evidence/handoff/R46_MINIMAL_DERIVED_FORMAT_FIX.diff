@@ -1,0 +1,69 @@
+--- baseline/src/filters.cpp
++++ fixed/src/filters.cpp
+@@ -7,6 +7,7 @@
+ #include <opencv2/imgproc.hpp>
+ 
+ namespace pfd {
++#include "approved_special_format.inc"
+ 
+ std::vector<std::string> utf8_chars(const std::string& s) {
+     std::vector<std::string> out;
+@@ -43,6 +44,8 @@
+ 
+ bool strict_plate_format(const std::string& s, int max_letters) {
+     auto ch = utf8_chars(s);
++    int approved = approved_special_syntax(ch, max_letters);
++    if (approved >= 0) return approved != 0;
+     const char* prov = "京津沪渝冀豫云辽黑湘皖鲁新苏浙赣鄂桂甘晋蒙陕吉闽贵粤青藏川宁琼";
+     if (ch.size() < 7 || ch.size() > 8) return false;
+     // 武警 WJ
+--- baseline/src/plate_rec.cpp
++++ fixed/src/plate_rec.cpp
+@@ -8,6 +8,7 @@
+ #include "filters.h"
+ 
+ namespace pfd {
++#include "approved_special_format.inc"
+ namespace crop_policy {
+ #include "color5_crop_policy.inc"
+ }
+@@ -84,6 +85,8 @@
+ // 粗略格式校验：首字为省份/特殊汉字，总长 7(普通) 或 8(新能源)
+ bool PlateRecognizer::check_format(const std::string& s) {
+     auto ch = utf8_split(s);
++    int approved = approved_special_syntax(ch);
++    if (approved >= 0) return approved != 0;
+     if (ch.size() < 7 || ch.size() > 8) return false;
+     static const std::string prov = "京津沪渝冀豫云辽黑湘皖鲁新苏浙赣鄂桂甘晋蒙陕吉闽贵粤青藏川宁琼使";
+     if (ch[0].size() != 3 || prov.find(ch[0]) == std::string::npos) {
+--- baseline/src/approved_special_format.inc
++++ fixed/src/approved_special_format.inc
+@@ -0,0 +1,28 @@
++// GA36-2018 figs2/3/table3/appendixA-h; structural syntax only, not registration validity.
++// -1 means preserve the original ordinary/NEV/WJ/legacy-consular compatibility validator.
++static int approved_special_syntax(const std::vector<std::string>& c, int max_letters=2) {
++    if (c.size() >= 2 && c[0] == "W" && c[1] == "J") return -1;
++    bool special = false;
++    for (const auto& x : c)
++        if (x=="使"||x=="领"||x=="警"||x=="学"||x=="挂"||x=="港"||x=="澳") special=true;
++    if (!special) return -1;
++    if (c.size()!=7) return 0;
++    auto digit=[](const std::string& x){return x.size()==1 && x[0]>='0' && x[0]<='9';};
++    auto letter=[](const std::string& x){return x.size()==1 && x[0]>='A' && x[0]<='Z' && x[0]!='I' && x[0]!='O';};
++    const std::string provinces="京津沪渝冀豫云辽黑湘皖鲁新苏浙赣鄂桂甘晋蒙陕吉闽贵粤青藏川宁琼";
++    auto province=[&](const std::string& x){return x.size()==3 && provinces.find(x)!=std::string::npos;};
++    if(c[6]=="使") { for(int i=0;i<6;++i) if(!digit(c[i])) return 0; return 1; }
++    if(c[6]=="领") {
++        // Existing old P+letter+4serial+领 acceptance is NOT newly enabled or certified current.
++        if(province(c[0]) && letter(c[1])) return -1;
++        if(!province(c[0])) return 0;
++        for(int i=1;i<=4;++i) if(!digit(c[i])) return 0;
++        return digit(c[5])||(max_letters>=1 && letter(c[5]));
++    }
++    if(c[6]!="警" && c[6]!="学" && c[6]!="挂" && c[6]!="港" && c[6]!="澳") return 0;
++    if(!province(c[0]) || !letter(c[1])) return 0;
++    if((c[6]=="港"||c[6]=="澳") && (c[0]!="粤"||c[1]!="Z")) return 0;
++    int letters=0;
++    for(int i=2;i<=5;++i) { if(letter(c[i])) ++letters; else if(!digit(c[i])) return 0; }
++    return letters<=2 && letters<=max_letters;
++}

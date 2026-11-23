@@ -1,0 +1,91 @@
+{
+  "workflow": "C",
+  "title": "按明确模型契约选择颜色预处理",
+  "generated_at": "2026-11-17T10:04:03+08:00",
+  "timezone": "Asia/Shanghai (UTC+8)",
+  "kind": "complete_ten_fields_not_ten_hypotheses",
+  "ready_to_investigate": true,
+  "ready_to_apply": false,
+  "parent_review_required_before_implementation": true,
+  "this_stage_writes_proposal_only": true,
+  "do_not_concurrently_edit_repo": true,
+  "single_variable": "raw_rectified vs verified special-double horizontal stitch (then resize 96) for color5, selected only by an explicit per-model contract",
+  "reuse_existing_helper": "PlateRecognizer::merge_double (already frozen for recognition geometry). Do not invent a second concat.",
+  "must_not_change": [
+    "legacy 3-class classify_color input or map3",
+    "text selection / cross-frame weights",
+    "color name rules / color5_crop_policy (white/black rewrite only)",
+    "single-layer path (no stitch)",
+    "SU training exception (source=='su' is not stitched)",
+    "the already-landed ==3 old-slot predicate (isolate that evidence)"
+  ],
+  "ten_fields": {
+    "1_question": "对于未来通过 B 门的 canonical 派生五类候选，C++ classify_color5 是否应按明确模型契约，在已验证的 special-double 上改用既有 merge_double(rectified) 再 96×96，而单层与 SU 例外保持 raw，且不改旧三类/选字/跨帧/颜色规则？",
+    "2_evidence": "B14 REPORT.md 与 CROSSLINE_DOUBLE_COLOR_EVIDENCE.json：canonical ecba573c… 由 plate_optim_common.py crop 9–18、Data 20–36 证明 special+double 先矫正再横拼（上 5/12、下自 1/3）然后颜色 resize96；su 在 crop 第 11 行提前返回；export_color_v2.py 18 个权重/偏置与 canonical 逐元素匹配；R82 train_qat_distill.py 92–111/326–327 对学生 9c840 使用同一拼接。C 既有矩阵：生产三类 raw 已知；repo 9d41 仅 demo 拼接、训练 UNKNOWN；9d41 与 ecba/9c840 字节不同，继承 UNKNOWN。归档集成源 classify_color5(r.rectified)（plate_rec.cpp:300）。归档 plate_rec.h 仅有 rectified/det_layer/layer，无 special/su 的 source 字段；recognize(frame,kps,layer)；integrated main.cpp source 命中 0。R55 TRAIN400 已准入 manifest SHA db2c85bd16fe777cd39bdff8d1fdf96f5e9ade4ce263bdc35c510becff8435e7，single 379 / double 21，例 special:18375/16528/19413。",
+    "3_hypothesis": "单一变量：仅在模型契约写明 special_double_stitched_then_resize96 时，对可安全识别的 special-double 使用已冻结 merge_double，再进入颜色 96。不把该契约套到旧三类或未绑定的 9d41。不把失败的 R84 设成产品默认。不把检测器/采用层数等同训练 source GT。若需 sidecar 记录政策，先方案后启用。",
+    "4_mechanism": "离线：用 TRAIN 夹具上已有 source/layer GT，把 Python crop+Data 的颜色输入图与 C++ merge_double（单层则跳过）再 resize96 做逐像素核对。在线方案：sidecar 声明模型输入政策；部署侧没有 source 字段，因此不能写 if(layer==double) 就拼。合法单层必须保持 raw。层数误判会导致误拼或漏拼，必须作为风险而不是用预测层数当 GT。旧证据（==3 谓词小测试、176/32/43/R36）与本变量隔离。",
+    "5_history_difference": "不是旧槽 ==3（云端已在 2241e28 落地，accept_no_release，本提案不重做、不并行改同一文件）。不是量化重试、不是启用 R84、不是改 crop_policy/选字/跨帧。不是用 demo 或同名 infer_plate.py 代替训练契约。不重跑无关 32/213/176/43。",
+    "6_data": {
+      "allowed_existing_inputs": [
+        {
+          "path": "/workspace/cn_val_su/v25/optimization_round55/TRAIN400_ADMISSION_AND_SELECTION_FROZEN_BEFORE_IMAGES.json",
+          "sha256": "db2c85bd16fe777cd39bdff8d1fdf96f5e9ade4ce263bdc35c510becff8435e7",
+          "use": "already-admitted TRAIN metadata only; project source/layer/group_id; 21 explicit doubles + a frozen subset of singles for protection"
+        },
+        {
+          "path": "/workspace/cn_val_su/finetune_original_v2/plate_optim_common.py",
+          "use": "reference recipe for pixel-compare, not retraining"
+        },
+        {
+          "path": "/workspace/cn_val_su/finetune_original_v2/optimize_plate_v2.py",
+          "use": "color Data wiring reference"
+        },
+        {
+          "path": "/workspace/cn_val_su/v25/optimization_round82/train_qat_distill.py",
+          "use": "student stitch recipe reference only; do not enable R84"
+        },
+        {
+          "path": "/workspace/cn_val_su/v25/optimization_round40/gold_source/src/plate_rec.cpp",
+          "lines": "90-99",
+          "use": "frozen merge_double helper"
+        }
+      ],
+      "explicit_double_examples_already_listed": [
+        "special:18375",
+        "special:16528",
+        "special:19413"
+      ],
+      "do_not_use": [
+        "R41 32 CPU ORT groups",
+        "unrelated 213",
+        "R40 176 synthetic InferEngine",
+        "R46 43/54 video fixtures as a substitute for preprocess pixels",
+        "validation retune or new labels",
+        "new image/split scan"
+      ],
+      "data_rule": "Only existing TRAIN fixtures. Do not change or tune validation."
+    },
+    "7_expected_improvement": "只闭合未来通过 B 门的 canonical 派生候选在 special-double 上的预处理口径，并得到 Python/C++ 逐像素协议。不宣称颜色准确率变化，不宣称发布，不把 9d41 或 R84 一并启用。",
+    "8_possible_degradation": "若用检测层数代替 source GT，可能把单层或本应按 SU 例外不拼的样本拼上，或把双层漏拼。若把契约套到旧三类或未绑定 9d41，会破坏已知/未知训练口径。若另写第二套拼接几何，可能与识别 helper 或训练器整数除法不一致。若擅自选产品默认或启用失败 R84，等于绕过 B 门。",
+    "9_budget": "本阶段（已执行约束）：只写契约与提案，≤5 min、2 CPU、2 GiB，0 训练/编译/推理/上板/改模型/改仓库。若父方此后授权离线逐像素实验：建议同样 2 CPU / 2 GiB，只用已准入 TRAIN 夹具与既有 helper，不训练、不全项目编译、不上板、不改生产、不改任何模型；需要新依赖或要动验证集则停。",
+    "10_success_failure_earlystop": {
+      "this_stage_success": "矩阵与完整十字段提案落盘，云端 ==3 已登记为 accept_no_release，未改代码。",
+      "future_experiment_success_if_authorized": "在冻结 TRAIN 夹具上，Python 训练作物与 C++ merge_double（单层不拼）再 96 的颜色输入逐像素一致；合法单层保持 raw；部署无 source 字段的事实被写入方案；sidecar 只作为方案，未擅自设默认；旧三类/选字/跨帧/规则/SU 例外未改；==3 与 32/213/176/43 证据保持隔离。",
+      "failure": "像素不一致仍改 C++；或把预测层数当成 source GT；或启用 R84/9d41/旧三类输入变更；或改验证/调参。",
+      "early_stop": "需要上板、NPU、全应用编译、新模型、或与仓库上已落地的 ==3 提交并发编辑同一文件；或发现必须引入第二套几何才能对齐。发现即停，不扩大变量。"
+    }
+  },
+  "sidecar_plan_not_a_product_default": {
+    "needed": true,
+    "purpose": "Record per-model color input policy: raw_rectified vs special_double_stitched_then_resize96, plus the SU exception.",
+    "forbidden_now": "Do not silently pick a product default. Do not attach this policy to failed R84 as an enablement path. Do not apply it to 9d41 until that model's training is bound.",
+    "deploy_predicate_open_item": "Archived runtime has no special/su source field. Any later hook must define how it abstains when only det_layer/layer/rectified exist, and must document layer-mispredict risk. That predicate is not chosen in this write."
+  },
+  "old_evidence_isolation": [
+    "Cloud ==3 predicate test (len 0/1/2/4/5/6/12 reject, 3 accept, fails 0) stays a miswire guard only; not a preprocess or NPU2/video pass",
+    "R36 npu1 [1,3]/12B packing stays packing evidence for the old head",
+    "R40 176 / R41 32 / R46 43 / unrelated 213 are not reused here",
+    "9d41 demo stitch is not canonical training evidence",
+    "R84 stitch recipe is not R84 admission"
+  ]
+}

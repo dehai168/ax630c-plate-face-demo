@@ -1,0 +1,373 @@
+{
+  "workflow": "A",
+  "generated_at_Asia_Shanghai": "2026-11-17T09:58:20+08:00",
+  "timezone_label": "Asia/Shanghai (UTC+8)",
+  "update_rule": "After each completed task: update status, check dependencies, pick the next ready item that does not need user authorization, and do not treat a single rejected experiment as a project stop. This first batch must finish delivery before any new experiment is started.",
+  "highest_priority_executable_next_no_new_model": null,
+  "need_user_data_for_that_next_task": false,
+  "need_user_data_elsewhere": {
+    "six_vs_nine_branch_only": true,
+    "what": "GT for the existing 50-capture zip, and/or real confirmed 6vs9 failure plates as specified in R7. Not required to continue other A work."
+  },
+  "items": [
+    {
+      "id": "A-STAGE0-ARCHIVE-RESTORE",
+      "priority": 0,
+      "dependencies": [],
+      "ready": false,
+      "status": "COMPLETED_THIS_BATCH",
+      "blocker": null,
+      "next_action": "None. Deliverables written under /workspace/cn_val_su/v25/delivery_20261117/A/.",
+      "success_gate": "ARTIFACT_INDEX, BASELINE_COMPARISON, NEXT_TASK_QUEUE, STAGE_SUMMARY exist and cite actual numbers/paths; no training/compile/new inference; GT/splits/production v2.4 untouched.",
+      "evidence": [
+        "/workspace/cn_val_su/v25/delivery_20261117/A/ARTIFACT_INDEX.json",
+        "/workspace/cn_val_su/v25/delivery_20261117/A/BASELINE_COMPARISON.json",
+        "/workspace/cn_val_su/v25/delivery_20261117/A/NEXT_TASK_QUEUE.json",
+        "/workspace/cn_val_su/v25/delivery_20261117/A/STAGE_SUMMARY.md"
+      ]
+    },
+    {
+      "id": "A-V24-VAL600-ARCHIVE-CLOSE",
+      "priority": 1,
+      "dependencies": [
+        "A-STAGE0-ARCHIVE-RESTORE"
+      ],
+      "ready": false,
+      "status": "COMPLETED_CELL_UNKNOWN_PROPOSAL_DRAFTED_NOT_EXECUTED",
+      "blocker": null,
+      "next_action": "Archive search complete: cell remains UNKNOWN. Parent reviews EXPERIMENT_PROPOSAL_V24_VAL600_PREFIX_TTA.json and may dispatch later. Do not auto-execute. Do not fill the cell with teacher greedy, 95/106, or 96/106.",
+      "success_gate": "Met the archive-close gate: either a cited same-caliber table or a written proposal plus explicit UNKNOWN. Outcome is UNKNOWN + drafted proposal.",
+      "evidence": [
+        "/workspace/cn_val_su/v25/delivery_20261117/A/stage2_archive_close_20261117/V24_VAL600_CELL_STATUS.json",
+        "/workspace/cn_val_su/v25/delivery_20261117/A/stage2_archive_close_20261117/EXPERIMENT_PROPOSAL_V24_VAL600_PREFIX_TTA.json",
+        "/workspace/cn_val_su/v25/delivery_20261117/A/stage2_archive_close_20261117/STAGE2_SUMMARY.md"
+      ]
+    },
+    {
+      "id": "A-RESIDUAL-CASEBOOK",
+      "priority": 2,
+      "dependencies": [
+        "A-STAGE0-ARCHIVE-RESTORE"
+      ],
+      "ready": false,
+      "status": "COMPLETED_MERGE_NOT_A_TUNING_SIGNAL",
+      "blocker": null,
+      "next_action": "Casebook exists. Do not use it to retune decode parameters or to train on val residuals.",
+      "success_gate": "Per-ID table with GT, accepted baseline pred, source SHA, issue tags, and explicit distinction of suspected-label vs official error. No new forward pass.",
+      "evidence": [
+        "/workspace/cn_val_su/v25/delivery_20261117/A/stage2_archive_close_20261117/RESIDUAL_CASEBOOK.json",
+        "/workspace/cn_val_su/v25/delivery_20261117/A/stage2_archive_close_20261117/RESIDUAL_CASEBOOK_ERRORS_ONLY.json"
+      ]
+    },
+    {
+      "id": "A-DET-CROP-CONSISTENCY-UNIFY",
+      "priority": 3,
+      "dependencies": [
+        "A-STAGE0-ARCHIVE-RESTORE"
+      ],
+      "ready": false,
+      "status": "COMPLETED",
+      "blocker": "Full-frame exact lineage remains 0/102 and 23 local frames undecodable; recorded, not invented.",
+      "next_action": "Coverage matrix written. Remaining full-frame capture stays a workflow C / parent-dispatched item. No further unify work in A without new bound inputs.",
+      "success_gate": "A coverage matrix: val600 600/600 cpp-crop match (already known); 213/213 double-input bitwise (R33); held exact lineage 0/102; 23 undecodable local frames; plus TRAIN wide-ROI correlations labeled correlation-not-cause.",
+      "evidence": [
+        "/workspace/cn_val_su/v25/delivery_20261117/A/stage2_archive_close_20261117/CROP_CONSISTENCY_MATRIX.json",
+        "/workspace/cn_val_su/v25/optimization_round33/METADATA_TRACE_SUMMARY.json"
+      ]
+    },
+    {
+      "id": "A-RETAIN-PREFIX-TTA",
+      "priority": 4,
+      "dependencies": [],
+      "ready": false,
+      "status": "RETAINED",
+      "blocker": null,
+      "next_action": "Keep locked prefix and TTA. Box-CPU isolated prefix-vs-greedy (stage4) and original-vs-6view TTA (stage5) costs are measured. Do not retune from them. Board/NPU costs remain unmeasured.",
+      "success_gate": "Parameters and SHAs remain those verified this batch; no silent decoder drift.",
+      "evidence": [
+        "/workspace/cn_val_su/v25/optimization_round4/decoder_core.py",
+        "/workspace/cn_val_su/v25/optimization_round5/train_locked_geometry_policy.json"
+      ]
+    },
+    {
+      "id": "A-NEV-AA88-NEW-PROPOSAL-ONLY",
+      "priority": 5,
+      "dependencies": [
+        "A-RESIDUAL-CASEBOOK"
+      ],
+      "ready": false,
+      "status": "NO_NEW_DEFENSIBLE_MECHANISM_THIS_STAGE",
+      "blocker": "Casebook is available, but no mechanism distinct from rejected R8/R2/R11 was introduced this stage. Not a training authorization.",
+      "next_action": "Do not train. Keep the issue open. Only write a new experiment proposal later if a distinct evidenced hypothesis appears. This is not waiting for the user to approve a technical choice.",
+      "success_gate": "A proposal that names the difference from R8/R2/R11, protects ordinary/police/embassy, and does not use val for decode search — or an explicit 'no defensible proposal yet'.",
+      "evidence": [
+        "/workspace/cn_val_su/v25/optimization_round8/round8_report.md"
+      ]
+    },
+    {
+      "id": "A-6VS9-WAIT-USER-OR-NEW-EVIDENCE",
+      "priority": 6,
+      "dependencies": [],
+      "ready": false,
+      "status": "BLOCKED_THIS_BRANCH_ONLY",
+      "blocker": "R7 0 synthetic flips; R10 zip has 0 recoverable GT; formal 6vs9 counts UNKNOWN. This does not stop other A work.",
+      "next_action": "Do not distort images further to force flips, and do not move SuMGC329 into TRAIN. If the user later provides GT for the 50 captures or real 6vs9 failures, classify already-computed locked predictions first (images already exist for the zip).",
+      "success_gate": "Enough plate-isolated confirmed 6vs9 examples to build a FIT/CHECK mechanism set, or a decision to leave this branch parked.",
+      "evidence": [
+        "/workspace/cn_val_su/v25/optimization_round7/round7_report.md",
+        "/workspace/cn_val_su/v25/user_tail69_audit/REPORT.md"
+      ]
+    },
+    {
+      "id": "A-FULLFRAME-LINEAGE-HANDOFF-TO-C",
+      "priority": 7,
+      "dependencies": [],
+      "ready": false,
+      "status": "HANDOFF",
+      "blocker": "Exact historical full-frame trace missing; 23 local held frames undecodable; board writes require safety confirmation. Not an OCR-training task.",
+      "next_action": "Leave to workflow C / later parent-dispatched readonly or capture work. Do not treat crop 554/600 as board or full-frame pass. Do not claim C's 32/176 results here.",
+      "success_gate": "Workflow C defines a safe capture contract for frame-det-hypothesis-call lineage; A only consumes resulting bound inputs.",
+      "evidence": [
+        "/workspace/cn_val_su/v25/optimization_round33/REPORT.md"
+      ]
+    },
+    {
+      "id": "A-BOARD-TTA-LATENCY-HANDOFF",
+      "priority": 8,
+      "dependencies": [
+        "A-RETAIN-PREFIX-TTA"
+      ],
+      "ready": false,
+      "status": "UNMEASURED_HANDOFF",
+      "blocker": "Board/NPU extra latency of 6-view TTA and of prefix vs greedy remains UNMEASURED. Stage-4/5 measured only box x86 CPU isolated costs and do not fill this handoff.",
+      "next_action": "Do not use theoretical 6x, stage-5 21.3 ms/sample software delta, or R32 bundled 21.3s as a board/NPU measurement. A board protocol requires C / later authorization. Not auto-started.",
+      "success_gate": "Measured added latency with backend labeled, without calling software proxy a board result.",
+      "evidence": [
+        "/workspace/cn_val_su/v25/optimization_round5/round5_report.md"
+      ]
+    },
+    {
+      "id": "A-V24-VAL600-EVAL-WAITING-PARENT",
+      "priority": 1,
+      "dependencies": [
+        "A-V24-VAL600-ARCHIVE-CLOSE"
+      ],
+      "ready": false,
+      "status": "COMPLETED_PREFLIGHT_CELL_STILL_UNKNOWN",
+      "blocker": "Official float (ONNX/PT) correspondence for production plate_rec_npu1.axmodel 728d8f2065632dbd383c347d80f4fba12a38d270da9289223cc709285ba66576 was not found in off-board archives; 600×6 software eval not executed.",
+      "next_action": "Preflight done. Do not auto-run inference. Resume only if the exact official export manifest and corresponding already-exported float of 728d8f20… become available off-board. Do not fill the cell with teacher greedy, 95/106, 96/106, accepted 554/600 without correspondence, or R44 rec_real_minmax 02a2f4f1…",
+      "success_gate": "Met the dispatched stage gate: bind production identity via trusted lineage; run or reuse the one software eval only if official float + interface match; otherwise fail-closed UNKNOWN with exact missing artifacts. Outcome: axmodel identity BOUND, official float NOT FOUND, inference NOT EXECUTED, cell UNKNOWN.",
+      "evidence": [
+        "/workspace/cn_val_su/v25/delivery_20261117/A/stage3_lineage_preflight_20261117/LINEAGE_PREFLIGHT.json",
+        "/workspace/cn_val_su/v25/delivery_20261117/A/stage3_lineage_preflight_20261117/EVAL_DECISION.json",
+        "/workspace/cn_val_su/v25/delivery_20261117/A/stage3_lineage_preflight_20261117/EXPERIMENT_PROPOSAL_V24_VAL600_PREFIX_TTA_CORRECTED.json",
+        "/workspace/cn_val_su/v25/delivery_20261117/A/stage3_lineage_preflight_20261117/IDENTITY_GATE_CORRECTION.json",
+        "/workspace/cn_val_su/v25/delivery_20261117/A/stage2_archive_close_20261117/EXPERIMENT_PROPOSAL_V24_VAL600_PREFIX_TTA.json"
+      ]
+    },
+    {
+      "id": "A-V24-VAL600-SOFTWARE-EVAL-WAITING-OFFICIAL-FLOAT",
+      "priority": 1,
+      "dependencies": [
+        "A-V24-VAL600-EVAL-WAITING-PARENT"
+      ],
+      "ready": false,
+      "status": "PARKED_MISSING_OFFICIAL_FLOAT_CORRESPONDENCE",
+      "blocker": "Need an official export/compile correspondence manifest naming the already-exported ONNX or PT that produced production plate_rec_npu1.axmodel SHA 728d8f2065632dbd383c347d80f4fba12a38d270da9289223cc709285ba66576, plus that float file, with interface matching the frozen input/decode contract. Not a request for all user data. Not a request to re-approve the technical design.",
+      "next_action": "Do not auto-execute. Do not re-export ONNX, train, or disguise the bare .axmodel as an ONNX comparison. If the exact official float and manifest later appear off-board, bind SHA, confirm interface, then run or reuse the one 600×6 frozen-contract software eval under <=2 CPU / 2GiB RSS / 15 min wall.",
+      "success_gate": "Official correspondence + interface match, then one bound software eval or reuse fills the cell with SHAs and backend label; otherwise remain UNKNOWN.",
+      "evidence": [
+        "/workspace/cn_val_su/v25/delivery_20261117/A/stage3_lineage_preflight_20261117/LINEAGE_PREFLIGHT.json",
+        "/workspace/cn_val_su/v25/delivery_20261117/A/stage3_lineage_preflight_20261117/V24_VAL600_CELL_STATUS.json"
+      ]
+    },
+    {
+      "id": "A-PREFIX-GREEDY-ISOLATED-CPU-LATENCY",
+      "priority": 4,
+      "dependencies": [
+        "A-RETAIN-PREFIX-TTA"
+      ],
+      "ready": false,
+      "status": "COMPLETED_MEASUREMENT_REPRODUCIBILITY_ACCEPTED",
+      "blocker": null,
+      "next_action": "Do not retune decode parameters from these times. Do not report this as NPU/board/TTA/full-frame latency.",
+      "success_gate": "Same-implementation isolated CPU timing on frozen 600 saved probs, or exact missing prerequisites. Outcome: official 1+3 rounds, texts match, input SHA unchanged, ACCEPT_MEASUREMENT_REPRODUCIBILITY only.",
+      "evidence": [
+        "/workspace/cn_val_su/v25/delivery_20261117/A/stage4_isolated_decoder_latency_20261117/EXPERIMENT_PROPOSAL_ISOLATED_PREFIX_VS_GREEDY_CPU.json",
+        "/workspace/cn_val_su/v25/delivery_20261117/A/stage4_isolated_decoder_latency_20261117/MEASUREMENT_RESULTS.json",
+        "/workspace/cn_val_su/v25/delivery_20261117/A/stage4_isolated_decoder_latency_20261117/EVAL_DECISION.json",
+        "/workspace/cn_val_su/v25/delivery_20261117/A/stage4_isolated_decoder_latency_20261117/STAGE4_SUMMARY.md"
+      ]
+    },
+    {
+      "id": "A-TTA-VS-ORIGINAL-ISOLATED-CPU-LATENCY",
+      "priority": 4,
+      "dependencies": [
+        "A-RETAIN-PREFIX-TTA"
+      ],
+      "ready": false,
+      "status": "COMPLETED_MEASUREMENT_REPRODUCIBILITY_ACCEPTED",
+      "blocker": null,
+      "next_action": "Do not retune TTA/decode from these times. Do not report this as NPU/board/full-frame latency or as theoretical 6x.",
+      "success_gate": "Bound old runner + TTA input chain, one official 1+3 ORT CPU measurement, TTA texts match accepted 600, or stop at exact missing dependencies. Outcome: ACCEPT_MEASUREMENT_REPRODUCIBILITY.",
+      "evidence": [
+        "/workspace/cn_val_su/v25/delivery_20261117/A/stage5_tta_isolated_cpu_latency_20261117/EXPERIMENT_PROPOSAL_ISOLATED_TTA_VS_ORIGINAL_CPU.json",
+        "/workspace/cn_val_su/v25/delivery_20261117/A/stage5_tta_isolated_cpu_latency_20261117/MEASUREMENT_RESULTS.json",
+        "/workspace/cn_val_su/v25/delivery_20261117/A/stage5_tta_isolated_cpu_latency_20261117/EVAL_DECISION.json",
+        "/workspace/cn_val_su/v25/delivery_20261117/A/stage5_tta_isolated_cpu_latency_20261117/STAGE5_SUMMARY.md"
+      ]
+    }
+  ],
+  "archived_rejected_routes": [
+    {
+      "id": "R2_feature_CTC_distill",
+      "decision": "REJECTED_NO_EXPORT",
+      "reason": "Same-PyTorch special 451 then 449 then 450/489; NEV 88->86/94; held stayed 93/106. Cannot hide NEV regression behind a flat total.",
+      "constraint_class": "User hard constraint plus this experiment rejection: do not undistinguished-distill weaker teacher features into NEV. This specific recipe is archived; it is not a license to retry the same setup. A future distill, if any, would need a different evidenced hypothesis and a formal proposal.",
+      "evidence": "/workspace/cn_val_su/v25/optimization_round2/round2_report.md"
+    },
+    {
+      "id": "R3_local_blank_adapter",
+      "decision": "NOT_DEPLOYED",
+      "reason": "TRAIN-fit blank delta; special 451->452/489, held 93/106 unchanged; simple blank suppression can hurt repeat separators.",
+      "constraint_class": "Single-experiment / assistant boundary (not deployed). Not a permanent ban on all blank research if a new distinct proposal exists.",
+      "evidence": "/workspace/cn_val_su/v25/optimization_round3/round3_report.md"
+    },
+    {
+      "id": "R6_tail69_resample",
+      "decision": "beta=0",
+      "reason": "All six TRAIN candidates 0 whole-plate gain vs 4813/4998 and 200/211 per tail; 0 natural 6vs9 swaps in that TRAIN tail set.",
+      "constraint_class": "This recipe is archived. Reopening requires new evidence, not a rerun of the stretch/beta grid. Not a user ban on all future 6/9 work.",
+      "evidence": "/workspace/cn_val_su/v25/optimization_round6/round6_report.md"
+    },
+    {
+      "id": "R7_synthetic_69_stress",
+      "decision": "NO_MECHANISM_SET",
+      "reason": "10550 evaluations, 6->9=0, 9->6=0. Stop worsening distortion to force the error.",
+      "constraint_class": "Assistant/experiment stop for this stress protocol. User hard process allows requesting real failure samples. Not a project-wide stop.",
+      "evidence": "/workspace/cn_val_su/v25/optimization_round7/round7_report.md"
+    },
+    {
+      "id": "R8_green_length_repeat_verifier",
+      "decision": "enabled=false",
+      "reason": "Best apparent set: NEV 816->818 but ordinary 2007->2005; total 4813 flat. Triggered type-protection reject.",
+      "constraint_class": "Aligns with user hard constraint: no forced character completion to inflate surface accuracy. This verifier is archived; do not retune green/CTC thresholds on val.",
+      "evidence": "/workspace/cn_val_su/v25/optimization_round8/round8_report.md"
+    },
+    {
+      "id": "R13_R15_crop_expand_or_foreground_contain",
+      "decision": "REJECTED",
+      "reason": "R15 both strategies safe coverage 0, all inputs fell back; no crop-forward gain. R14 earlier combo recovered some 8to7 but ordinary/embassy regressions.",
+      "constraint_class": "These geometries/recipes archived. Not a ban on all future crop work if a new safe, type-protecting proposal is written.",
+      "evidence": "/workspace/cn_val_su/v25/optimization_round15/REPORT.md"
+    },
+    {
+      "id": "R16_R17_small_localizer",
+      "decision": "REJECTED_GEOMETRIC_SAFETY",
+      "reason": "Geometric containment safety failed; did not enter recognizer comparison.",
+      "constraint_class": "Single-experiment rejection, not a permanent ban on all localization research.",
+      "evidence": "/workspace/cn_val_su/v25/optimization_round17/REPORT.md"
+    },
+    {
+      "id": "R18_constrained_head",
+      "decision": "REJECTED_NO_SEALED_EVAL",
+      "reason": "TRAIN 4815->4816/4998, true8 NEV 815/860 and 16 8to7 unchanged (strict NEV gates fail). The one exact recovery may be contextual completion with suffix mostly outside ROI.",
+      "constraint_class": "This candidate (head SHA d1dbe113...) rejected. Related to no forced/contextual completion interpretation. Not a ban on all future evidenced training.",
+      "evidence": "/workspace/cn_val_su/v25/optimization_round18/summary.json"
+    },
+    {
+      "id": "R19_R20_tiny_adapters",
+      "decision": "STOP_TINY_ADAPTER_TINKERING",
+      "reason": "R19 192-param temporal residual rejected after full compare; R20 audit found no defensible runtime crop repair.",
+      "constraint_class": "Assistant-set pause on this tinkering class after repeated negatives. Not a user permanent ban on every future adapter if a new evidenced proposal exists.",
+      "evidence": "/workspace/cn_val_su/v25/optimization_round19/REPORT.md"
+    },
+    {
+      "id": "R24_late_CNN",
+      "decision": "REJECT_FINAL_CALIBRATION",
+      "reason": "Frozen late-CNN training rejected at calibration/final gate (see R24 report).",
+      "constraint_class": "This training candidate rejected; not a blanket ban on all later training.",
+      "evidence": "/workspace/cn_val_su/v25/optimization_round24/REPORT.md"
+    },
+    {
+      "id": "R25_Nbest_sequence_risk",
+      "decision": "REJECT_INTERNAL_CAL",
+      "reason": "Feasibility passed; actual training rejected; no sealed run.",
+      "constraint_class": "Single-experiment rejection.",
+      "evidence": "/workspace/cn_val_su/v25/optimization_round25/REPORT.md"
+    },
+    {
+      "id": "R27_R28_40step",
+      "decision": "REJECT_CAL / TRANSFER_ASSUMPTIONS_FALSIFIED",
+      "reason": "R27 40-step training rejected; R28 0-update audit falsified transfer assumptions; stop this 40-step route.",
+      "constraint_class": "This 40-step route archived. Not a ban on every future structural change with a new distinct proposal.",
+      "evidence": "/workspace/cn_val_su/v25/optimization_round28/REPORT.md"
+    },
+    {
+      "id": "R31_R32_original20_full_recognizer_candidate",
+      "decision": "REJECT_EXTERNAL_VAL_NO_RELEASE",
+      "reason": "TRAIN gates had passed (4998: 4815->4885, NEV 816->827/863) but frozen external val600 same-input same-decode fell 554->551, combined NEV 91->90/99, ordinary 232->230/258, recoveries 4 vs regressions 7.",
+      "constraint_class": "This checkpoint 0565e53a... is rejected. Do not held-hunt, lower gates, or retrains from its failures. This is not a permanent ban on all future training.",
+      "evidence": "/workspace/cn_val_su/v25/optimization_round32/summary.json"
+    },
+    {
+      "id": "process_error_stop_after_one_line_fails",
+      "decision": "CORRECTED_BY_USER_COMMAND",
+      "reason": "Prior assistant practice of stopping the whole project after one rejected experiment is a process error, not a technical ban.",
+      "constraint_class": "User hard process constraint going forward: keep NEXT_TASK_QUEUE moving on independent work.",
+      "evidence": "user command t113u / pt113u"
+    }
+  ],
+  "user_hard_constraints": [
+    "Do not lower already fixed acceptance standards",
+    "Do not improve one class by sacrificing another",
+    "Do not modify formal val, protection sets, or historical GT",
+    "Do not describe software-proxy tests as real board tests",
+    "Do not describe compile-pass as model acceptance",
+    "Do not modify production v2.4",
+    "Do not blindly rerun schemes already sufficiently disproven",
+    "Do not undistinguished-distill weaker teacher features into the NEV model",
+    "Do not use forced character completion to raise surface accuracy",
+    "Do not pick decode parameters on the validation set",
+    "Do not mix PyTorch, ONNX, and NPU numbers as one口径",
+    "A single experiment failure does not stop the project"
+  ],
+  "assistant_self_set_boundaries_not_permanent_bans": [
+    "Stop further synthetic worsening in the R7 6vs9 stress protocol",
+    "Pause tiny-adapter tinkering after R19/R20",
+    "Close the 40-step transfer route after R28",
+    "Do not run held for a candidate that already failed frozen val gates (R32 protocol)",
+    "R9 collinear-vertex ROI reader fix is diagnostic-wrapper only and not production-integrated"
+  ],
+  "stage2_dir": "/workspace/cn_val_su/v25/delivery_20261117/A/stage2_archive_close_20261117",
+  "stage3_dir": "/workspace/cn_val_su/v25/delivery_20261117/A/stage3_lineage_preflight_20261117",
+  "highest_priority_note": "A independent auto-executable measurement items are exhausted. Do not repeat production-identity scans or logits rehashing. Remaining A work is externally blocked or a C handoff. B and C continue.",
+  "external_gap_for_parked_v24_software_eval": {
+    "need_all_user_data": false,
+    "need_new_annotations_or_captures_for_this_cell": false,
+    "exact_missing": [
+      {
+        "type": "official_export_or_compile_correspondence_manifest",
+        "must_name": "the float source (ONNX and/or PT) whose official export/compile produced production plate_rec_npu1.axmodel SHA 728d8f2065632dbd383c347d80f4fba12a38d270da9289223cc709285ba66576",
+        "acceptable_sources": "existing off-board Pulsar/AXERA compile package, official export log, or a previously attested sidecar from the same official export that produced 728d8f20. Not a newly created re-export in this project stage."
+      },
+      {
+        "type": "the_already_exported_float_file",
+        "formats": [
+          "ONNX",
+          "PT"
+        ],
+        "constraint": "must be the file named by that official correspondence, already existing; I/O must fully match the frozen contract (48×160 BGR, right pad 128, (x-127.5)/127.5 or equivalent, locked Prefix+TTA / charset). Need only one of ONNX or PT if it already supports the frozen interface."
+      }
+    ]
+  },
+  "stage4_dir": "/workspace/cn_val_su/v25/delivery_20261117/A/stage4_isolated_decoder_latency_20261117",
+  "stage5_dir": "/workspace/cn_val_su/v25/delivery_20261117/A/stage5_tta_isolated_cpu_latency_20261117",
+  "a_independent_auto_executable_items_exhausted": true,
+  "external_blockers_remaining": {
+    "production_val600_software_baseline": "UNKNOWN pending official float correspondence for plate_rec_npu1.axmodel 728d8f20…; already reported, do not rescan identity",
+    "six_vs_nine_branch_only": "GT for the existing 50-capture zip and/or confirmed 6vs9 failures; not required for other A work",
+    "board_or_NPU_TTA_and_prefix_latency": "UNMEASURED; workflow C / later authorized board protocol. Stage 4–5 filled box-CPU isolated costs only.",
+    "NEV_AA88": "open issue, no new defensible mechanism; any future repair requires a 10-item proposal before training"
+  }
+}

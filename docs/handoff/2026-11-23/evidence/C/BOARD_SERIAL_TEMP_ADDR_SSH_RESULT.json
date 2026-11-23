@@ -1,0 +1,116 @@
+{
+  "workflow": "C",
+  "id": "C-PF-SSH-002",
+  "generated_at": "2026-11-17T11:38:26+08:00",
+  "timezone": "Asia/Shanghai (UTC+8)",
+  "status": "COMPLETED_TEMP_ADDR_ADDED_NO_SSH_LISTENER",
+  "hypothesis": "Via authorized COM3, a no-conflict temporary 192.168.151.x address added in RAM to existing eth0 can establish SSH without changing persistent config, original IP, or default route.",
+  "hypothesis_result": "ADDRESS_ADD_SUCCEEDED_SSH_NOT_LISTENING",
+  "not_a_release_pass": true,
+  "authorization_used": "User 2026-11-17T11:27+08:00: use serial to set a 151.x address to connect. Not reboot/repair/production-file authorization.",
+  "serial": {
+    "port": "COM3",
+    "pnp": "Prolific USB-to-Serial Comm Port (COM3) USB\\VID_067B&PID_2303\\8&34BE1EAC&1&3",
+    "settings": "115200/8N1 Handshake=None DtrEnable=false RtsEnable=false set before Open",
+    "occupancy_at": "2026-11-17T11:31:36+08:00",
+    "known_serial_tool_process_check": "Get-Process name filter inconclusive in first occupancy command due to a typo; Open succeeded so the port was not exclusively held. No leftover PC scripts.",
+    "already_authenticated_shell": true,
+    "prompt": "/opt #",
+    "login_attempted": false,
+    "password_used_or_logged": false,
+    "deliberate_dtr_rts_pulse_or_break_or_reset": false,
+    "boot_sequence_observed": false,
+    "board_reset_by_this_open": false
+  },
+  "identity": {
+    "hostname": "Axera",
+    "uname": "Linux Axera 4.19.125 #1 SMP PREEMPT Sat Aug 2 14:38:28 CST 2025 aarch64 GNU/Linux",
+    "board_clock_at_collect": "Tue Nov 17 11:33:47 CST 2026",
+    "uptime": "11:33:47 up 3 days, 18:13, 1 users, load average: 23.59, 23.32, 23.20",
+    "eth0_mac": "00:18:f5:a0:a9:6e",
+    "original_ipv4": "10.100.100.101/24"
+  },
+  "pc": {
+    "machineId": "697781b2-8ff0-4a80-a5ef-b65276461177",
+    "label": "level",
+    "ipv4_rechecked": "以太网 192.168.151.152/24",
+    "default_route": "0.0.0.0/0 via 192.168.151.1 metric 256",
+    "nic_changed": false
+  },
+  "conflict_check": {
+    "preferred_candidate": "192.168.151.200",
+    "candidates_tried": 1,
+    "second_candidate_needed": false,
+    "precheck_at": "2026-11-17T11:34:50+08:00",
+    "on_board_before_add": false,
+    "not_gateway_or_pc": true,
+    "Get-NetNeighbor_before": "NO_ENTRY",
+    "SendARP_before": "code=67 mac=NONE (not ping-only)",
+    "subnet_scan": false
+  },
+  "address_change": {
+    "command": "ip addr add 192.168.151.200/24 dev eth0",
+    "add_exit": 0,
+    "at": "2026-11-17T11:36:01+08:00 to 2026-11-17T11:36:14+08:00",
+    "new_ip": "192.168.151.200/24",
+    "iface": "eth0",
+    "persistent_config_written": false,
+    "flush_or_replace_or_network_restart": false,
+    "original_ip_retained": true,
+    "mac_retained": true,
+    "link_remained_up": true,
+    "default_route_retained": "default via 10.100.100.1 dev eth0",
+    "kernel_added_connected_route": "192.168.151.0/24 dev eth0 scope link src 192.168.151.200",
+    "postadd_SendARP_mac": "00:18:f5:a0:a9:6e",
+    "auto_rollback_executed": false,
+    "rollback_command_recorded_not_executed": "ip addr del 192.168.151.200/24 dev eth0"
+  },
+  "connectivity_after_add": {
+    "at": "2026-11-17T11:36:45+08:00",
+    "target": "192.168.151.200:22",
+    "neighbor": "MAC 00-18-F5-A0-A9-6E State=Reachable if=以太网",
+    "icmp_echo": true,
+    "tcp_22": false,
+    "ssh_login_attempted": false,
+    "ssh_auth_succeeded": false,
+    "reason": "Serial netstat showed no TCP/22 listener (other listens: 21,23,80,554,6000,6001,8082,9000/127.0.0.1,9006-9008,10080). TCP/22 from level failed. sshd was not started or enabled. Host key pubs exist under /etc/ssh but there is no current SSH service to authenticate to."
+  },
+  "health_readonly_via_serial_not_ssh": {
+    "source": "already-authenticated COM3 shell at 2026-11-17T11:33:47 CST board clock",
+    "hostname": "Axera",
+    "uname": "Linux Axera 4.19.125 aarch64",
+    "uptime": "3 days, 18:13",
+    "mounts_measured": [
+      "/dev/root / squashfs ro,relatime",
+      "/dev/mmcblk0p14 /opt ext4 rw,noatime,nodiratime,discard",
+      "/dev/mmcblk0p14 /var/mnt/emmc/freq_rw ext4 rw,nosuid,nodev,relatime,discard",
+      "/dev/mmcblk0p13 /var/mnt/emmc/scare_rw ext4 rw,nosuid,nodev,relatime"
+    ],
+    "ext4_errors_count_measured_now": {
+      "mmcblk0p13": 0,
+      "mmcblk0p14": 2168
+    },
+    "historical_2168_note": "R48 historical p14 errors_count was 2168. This is a new measurement that happens to equal 2168, not a reuse of the historical number.",
+    "new_io_error_during_reads": false,
+    "false_positive_note": "First collect script matched marker __EXT4_ERRORS__ against pattern ext4_error; ignored after review. No actual I/O error text. Watchdog printk is not a boot sequence."
+  },
+  "board_persistent_file_writes": false,
+  "sshd_started_or_installed": false,
+  "pc_nic_changed": false,
+  "global_known_hosts_modified": false,
+  "vault": {
+    "parent_listed_no_saved_logins": true,
+    "this_executor_has_no_vault_or_form_tool": true,
+    "password_needed_this_session": false,
+    "do_not_assert_password_never_provided": true
+  },
+  "not_tested": [
+    "SSH authentication and SSH-path health (no TCP/22 listener)",
+    "Live SSH host-key exchange (keys were read from serial pub files only)",
+    "Gateway 192.168.151.1 or 10.100.100.1 as probe targets",
+    "Non-22 listen ports as SSH substitutes",
+    "NPU / model / video / 42 / 52",
+    "Persistence across reboot (explicitly not persisted, not rebooted)"
+  ],
+  "next_real_dependency": "An already-running SSH listener on the board (currently host keys and sshd_config exist under /etc/ssh, but TCP/22 is not listening). This executor must not start or enable sshd. Temporary address 192.168.151.200/24 is in RAM and reachable from level; rollback command is recorded and was not executed. If SSH later listens, use serial-read fingerprints for in-memory host-key verification; do not AutoAdd or write global known_hosts."
+}

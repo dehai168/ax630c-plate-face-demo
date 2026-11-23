@@ -1,0 +1,33 @@
+{
+  "workflow": "C",
+  "title": "Python canonical已知横拼输入 vs C++现有merge_double后resize96是否逐像素一致",
+  "kind": "complete_ten_fields_not_ten_hypotheses",
+  "revises": "C/COLOR_PREPROCESS_POLICY_PROPOSAL.json",
+  "does_not_overwrite_prior_proposal": true,
+  "generated_at": "2026-11-17T10:07:13+08:00",
+  "timezone": "Asia/Shanghai (UTC+8)",
+  "parent_acceptance": {
+    "accepted": "offline pixel-compare hypothesis only",
+    "rejected": [
+      "online C++ preprocess change this stage",
+      "sidecar product default",
+      "enabling any color candidate that has not passed B gates",
+      "inventing a runtime source field"
+    ]
+  },
+  "ready_to_investigate": true,
+  "ready_to_apply_online_code": false,
+  "this_round_scope": "Prepare and validate fixture identity only. Do not run C++. Do not claim Python/C++ consistency.",
+  "ten_fields": {
+    "1_question": "在同一份训练器矫正后、尚未双层拼接的 rectified BGR 输入上，Python canonical 的 crop（special-double 横拼）加 Data 颜色 resize96，是否与 C++ 现有 merge_double 再 resize96 逐像素一致？单层保护样本是否保持不拼接只 resize96？",
+    "2_evidence": "B14 已证 canonical crop 9–18 / Data 20–36；归档 merge_double 在 gold plate_rec.cpp:90-99，几何为上 5/12、下自 h/3、上半 resize 到下半后 hconcat。本包基于已准入 TRAIN400 manifest SHA db2c85bd16fe777cd39bdff8d1fdf96f5e9ade4ce263bdc35c510becff8435e7，读图前冻结全部 21 个 explicit double 与该 list 顺序下前 21 个 single。该 manifest 无 source==su 行。plate_optim_common.py SHA 8cd6a38344bb843a93f07401e6976cd40023ad67049c40693e84d9ccfe30b1cf 与 TRAIN400 准入记录一致。",
+    "3_hypothesis": "merge_double 与训练器 double 分支是同一套几何；在绑定的 rectified 输入上，C++ helper 后 resize96 应与 Python expected96 逐像素一致。此假设只作离线几何对照。线上采用层误判风险保留。预测层数不得改写成真值。source==su 不是可部署语义。",
+    "4_mechanism": "本轮只生成夹具：rectified BGR（训练器矫正后、拼接前）、crop+Data 的颜色 96×96 expected、以及模型前 /255 CHW float32 的期望 hash。观察副本只增加中间输出，不改训练算法。下一 Cloud 轮用既有 C++ merge_double 做限定 CPU 几何 helper 对照，不完整工程构建，不重跑 176/32。本轮不跑 C++。",
+    "5_history_difference": "不覆盖上一份政策提案。不改 2241e28 已落地的 ==3 谓词。不改线上预处理、不设 sidecar 默认、不启用未过门候选。不是量化或准确率实验。",
+    "6_data": "仅已准入 TRAIN400 冻结选择：21 double + 前 21 single。SU 在该 manifest 中不可用（0），不从验证集或其他列表补样。只读已存在源照片与坐标、层数元数据。不读验证/失败列表/GT 文字颜色。不下载新数据。交接不含模型/权重/ONNX/PT/axmodel/视频/原始全帧/真值/保护验证集/备份/凭据。",
+    "7_expected_improvement": "得到可供 Cloud 对照的、身份有效的离线夹具与训练器参考实现。本轮不宣称 Python/C++ 一致（未测 C++）。不宣称颜色准确率或发布。",
+    "8_possible_degradation": "若用近似图代替不可绑定的 rectify 中间值，会使对照失去训练器绑定。若为通过测试发明运行时 source 字段，会把数据集来源标签误当成线上语义。若把 GT layer 当作预测层，会掩盖线上层误判风险。",
+    "9_budget": "2 CPU / 2 GiB / 5 min；0 模型调用、训练、编译、板访问。本机不修改、不编译 repo。",
+    "10_success_failure_earlystop": "本轮成功=夹具身份有效：选择在读图前冻结；源文件 SHA 与 manifest 一致；照片可解码；rectify 中间值由原 crop 路径无歧义截取；成员与压缩包 SHA 已记；缺样不替换。失败=无法无歧义绑定 rectify 中间值则停止，不以近似图充真实夹具；或依赖缺失/解码失败则记录数量与原因，不换样。早停=需要训练/编译/上板/改仓库/完整工程构建。不得在本轮写 Python/C++ 一致通过。"
+  }
+}

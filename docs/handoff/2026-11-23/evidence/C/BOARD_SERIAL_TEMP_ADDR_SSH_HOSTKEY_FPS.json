@@ -1,0 +1,35 @@
+{
+  "source": "Read-only cat of /etc/ssh/ssh_host_*.pub and ssh-keygen -lf from already-authenticated serial shell. Private host key files were listed by name only and were not read.",
+  "at": "2026-11-17T11:35:53+08:00",
+  "keys": [
+    {
+      "type": "ssh-ed25519",
+      "bits": 256,
+      "sha256": "SHA256:qt1XxIesE//7oDUFw7xF++MFvurbD2YUDsLnFRPPfZQ",
+      "md5": "MD5:02:89:77:33:ac:24:24:3a:89:71:aa:58:3d:2d:fc:7a",
+      "comment": "root@aichip"
+    },
+    {
+      "type": "ecdsa-sha2-nistp256",
+      "bits": 256,
+      "sha256": "SHA256:Wy/gaUS8hXT82iVORLSrsvmHh6Cz1Ecz2gjdLfZBEN0",
+      "md5": "MD5:de:70:ec:66:44:f8:ce:bc:63:0f:57:10:8d:2b:a3:90",
+      "comment": "root@aichip"
+    },
+    {
+      "type": "ssh-rsa",
+      "bits": 3072,
+      "sha256": "SHA256:yRCtmItod170Yw47YkDugXf2z4fujsomEHrVQ4Wn6Sc",
+      "md5": "MD5:63:81:b0:25:7f:fc:6e:a4:9b:9a:27:ff:67:45:d2:ef",
+      "comment": "root@aichip"
+    },
+    {
+      "type": "ssh-dss",
+      "bits": 1024,
+      "sha256": "SHA256:782+In3hLH6EMpOfir3/aw4gu6ca2xyWM/NwNL9/9Hw",
+      "md5": "MD5:00:aa:3a:35:f1:4d:10:6d:71:f8:ba:4b:52:07:46:c9",
+      "comment": "root@aichip"
+    }
+  ],
+  "dropbear_pub_found": false
+}

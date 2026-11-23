@@ -1,0 +1,85 @@
+1	no-report		
+2	no-report		
+3	no-report		
+4	no-report		
+5	no-report		
+6	no-report		
+7	no-report		
+8	no-report		
+9	no-report		
+10	MISSING		
+11	yes	# Round 11：新能源8字→7字诊断（未发布）	
+12	yes	# Round 12：16条TRAIN新能源8→7视觉审计（只诊断、不发布）	
+13	yes	# Round13：边界完整性全TRAIN诊断与冻结扩边试验（不发布）	
+14	yes	# Round14：独立牌面/字符带定位的实际全TRAIN试验（未发布）	
+15	yes	# Round15：完整二维前景/布局包含与不确定性回退（已执行，拒绝）	
+16	yes	# Round16：先核查伪框，再做一次小模型学习定位可行性（实际完成，几何安全拒绝）	
+17	yes	# Round17：真实源图几何标注＋单次小模型实验（拒绝）	
+18	yes	# Round18：识别器可行性实测＋单次受约束head续训	
+19	yes	# Round19：192参数时间残差实训与完整对照——拒绝，停止小适配器试探	
+20	yes	# Round20：实际96源图/576输入审计，停止微适配器循环	
+21	yes	# Round21：全4998 TRAIN来源/监督审计（实际完成；未训练）	
+22	yes	# Round22：live LS只读监督来源审计（已完成授权范围）	status=LIVE_READONLY_ALLOWLIST_AUDIT_COMPLETED; 
+23	yes	# Round23：源图盲读监督风险审计（已完成，未训练）	status=AUDIT_COMPLETE_NO_LABEL_CHANGE_NO_TRAINING; 
+24	yes	# Round24 实际冻结late-CNN训练：拒绝	
+25	yes	# Round25 固定N-best序列风险：可行性通过，实际训练后拒绝	
+26	yes	# Round26：单一真实40时间步结构可行性已执行	
+27	yes	# Round27：单一真实40步训练——拒绝	
+28	yes	# Round28：有界因果迁移审计（完成，0更新）	
+29	yes	# Round29：本地新增真实监督盘点——找到实际数据，不是继续微调	
+30	yes	# Round30：真实数据污染排除已执行，训练未启用	
+31	yes	# Round31：单次真实扩容 original20 全识别器训练——TRAIN门全部通过，等待parent审阅	
+32	yes	# Round32：固定R31候选一次外部软件评估——拒绝；未继续held，未发布	
+33	yes	# Round33：原生产全帧链溯源与TRAIN回归——部分闭合；精确历史重放仍阻断	
+34	yes	# Round34续：已实际取得shell并完成只读路径/100源SHA preflight	
+35	yes	# Round35 — actual native pure-decode and recorder preparation	status=BOUNDED_TASK_COMPLETE_WITH_EXPLICIT_AX_BUILD_GAP; 
+36	yes	# Round36 — recovered SDK and REAL native TRAIN backend proof	status=REAL_NATIVE_TRAIN_GOLD_OFF_ON_PASS_WITH_EXPLICIT_COMPATIBILITY_AND_DRIVER_LIMITS; 
+37	yes	# LATEST: recovered access; original board capture directory absent; durable raw package incomplete	
+38	yes	# Round38 — actual bounded persistence/transport feasibility: NO-GO for full capture	
+39	yes	# Round39 — bounded readonly health and backup-conditions check	
+40	yes	# Round40：五类颜色真实归档源集成离线核验（非生产验收）	status=ACTUAL_ARCHIVED_SOURCE_OFFLINE_INTEGRATION_PASSED_NOT_PRODUCTION_ACCEPTED; 
+41	yes	# Round41 恢复完成：五类产物绑定与真实 C++ ORT 黄金参考	status=COMPLETED_BOX_SOURCE_BINDING_AND_REAL_CPP_ORT_SYNTHETIC_PARITY_NOT_BOARD_ACCEPTED; finished_at_Asia_Shanghai=2026-11-13T15:26:54.667375+08:00; 
+42	yes	# Round42 实际备份尝试：0/8，安全停止；临时通道已关闭	status=BLOCKED_NO_VERIFIED_BACKUPS_NETWORK_PROBE_TIMEOUT_AND_UART_INTEGRITY_STOP; finished_at_Asia_Shanghai=2026-11-13T15:43:46.181308+08:00; 
+43	yes	# Round43：实际回程路由核查、UART污染定位与1/8备份完成	status=PARTIAL_REAL_BACKUP_1_OF8_UART_CAUSE_IDENTIFIED_AND128KiB_SHA_VERIFIED; finished_at_Asia_Shanghai=2026-11-13T15:55:13.240616+08:00; 
+44	yes	# Round44 — 已完成原授权 8 项项目文件备份	status=COMPLETE_8_OF_8_PROJECT_BACKUP_VERIFIED; 
+45	yes	# Round45：真实归档视频入口离线集成核验 — 发布仍 NO-GO	
+46	yes	# Round46：有来源的已批准格式闭合及默认strict实测 — 仍NO-GO	
+47	yes	# Round47：系统级备份准备（已实际推进，尚未取得系统镜像）	status=ACTUAL_BACKUP_PREPARATION_COMPLETE_EXTERNAL_RESCUE_PATH_BLOCKED_NO_SYSTEM_IMAGE; 
+48	yes	# Round48：重启后只读核查	status=BOOT_AND_MAIN_SERVICE_CONFIRMED_FILESYSTEM_ABNORMAL_STILL; 
+49	yes	# Round49复查完成：空间增加，未见新增ext4错误，但不能认定已修复	status=COMPLETED_READONLY_AFTER_USER_RELEASED_COM3; 
+50	yes	# Round50：真实 AX 五类 IO 已核验，数值门禁仍失败（NO-GO）	status=ACTUAL_AX_IO_AND_DURABLE_CAPTURE_COMPLETE_NUMERICAL_GATE_FAILED_TRAIN_NOT_RUN; 
+51	yes	# Round51：已有五类产物溯源与差异边界定位	status=BOUNDED_BOX_DIAGNOSIS_COMPLETE_NUMERICAL_GATE_REMAINS_FAIL; 
+52	yes	# Round52：官方量化 Reference 通道恢复，主要差异已在编译前复现	status=OFFICIAL_QUANT_REFERENCE32_COMPLETE_MAJOR_GAP_REPRODUCED_BEFORE_COMPILER_RUNTIME; 
+53	yes	# Round53：单一权重离散反事实完成	status=SINGLE_WEIGHT_ONLY_COUNTERFACTUAL_COMPLETE_REMAINING_ACTIVATION_PATH_PRIORITY; 
+54	yes	# Round54 — 正式逐层实测完成；定位首个主要量化边界，尚非发布修复	status=COMPLETE_OFFICIAL_AND_WEIGHT_COUNTERFACTUAL_LAYER_CAPTURE_FIRST_MAJOR_SATURATION_LOCALIZED; 
+55	yes	# Round55 — 已实际执行，结构门失败并遇正式许可证错误；按契约停止	status=EXECUTED_ONE_OFFICIAL_QUANTIZATION_ATTEMPT_STOPPED_ON_FUSED_BOUNDARY_FAILURE_AND_LICENSE_ERROR; 
+56	yes	# Round56：缺失交付补齐与结论纠正	status=R56_DELIVERY_CORRECTED_FILES_EXIST_AND_READBACK_VERIFIED; 
+57	yes	# Round57 — 单融合边界实测完成：FP32生效，但立即等效重截断；正常HOME仍H0007	status=ACTUAL_SINGLE_BOUNDARY_EXPERIMENT_STOPPED_ON_EQUIVALENT_RECLIP_AND_REAL_LICENSE_FAILURE; 
+58	yes	# Round58 — 历史编译确实成功；纠正把当前报错归为用户授权问题	status=HISTORICAL_SUCCESS_CONFIRMED_CURRENT_STARTUP_NOT_RESTORED_NO_UNJUSTIFIED_REBUILD; 
+59	yes	# R59：标准Python/CLI已恢复，AX620E后端仍被loader兼容性阻断	status=NORMAL_PYTHON_AND_PUBLIC_CLI_RESTORED_AX620E_BACKEND_LOAD_BLOCKED; 
+60	yes	# R60：官方兼容基础runtime已实际建立；停在原厂默认copy初始化之前	status=OFFICIAL_ROOTFS_ROOTLESS_BASE_RUNTIME_WORKS_STOP_BEFORE_FORBIDDEN_VENDOR_BOOTSTRAP_COPY; 
+61	yes	# R61：正常Pulsar2环境已真实恢复，唯一control编译与正式数值check通过	status=OFFICIAL_NORMAL_ENVIRONMENT_RESTORED_SINGLE_CONTROL_COMPILE_AND_CHECK_PASS; 
+62	yes	# R62：新TRAIN400 control的固定32官方Reference完成，原门禁仍FAIL	status=REFERENCE32_COMPLETE_NEW_TRAIN400_CONTROL_FROZEN_GATE_FAIL; 
+63	yes	# R63 — TRAIN-only 首层浮点范围覆盖实证	
+64	yes	# R64 — 独立TRAIN128完整网络数值实验	
+65	yes	# R65 — TRAIN来源完整性与域覆盖准入审计	
+66	yes	# R66 — 已知629 TRAIN来源有界确认	
+67	yes	# R67 — 最后一次有界原图确认	
+68	yes	# R68 — 源权重推导合法U8极值补充校准：实证构建完成，独立开发门FAIL	
+69	yes	# R69 — 校准64的官方逐层机制诊断	
+70	yes	# R70 — 精确AdaRound契约已冻结，启动前资源不足而停止	
+71	yes	# R71 — 立即复用启动，仍被真实资源准入门拦停	
+72	yes	# R72：纠正资源准入误设，正式实跑；候选因原机制/数值门失败拒绝	
+73	yes	# R73：保存证据中的AdaRound退化机制；当前无公开支持的冻结scale修复接口	
+74	yes	# R74：官方备选与普通源模型等价修复研究（未构建）	
+75	yes	# R75：与官方 S8 网格相容的首层双 Conv 拆分（仅静态，未构建）	
+76	yes	# R76：不依赖 MinMax S8 不动点的官方机制路径（只读核实，未构建）	
+77	yes	# R77：唯一官方 EasyQuant 构建（导入预检通过，RSS 安全停止）	
+78	yes	# R78：唯一官方 EasyQuant 再尝试（6GiB/900s，RSS 再次安全停止）	
+79	yes	# R79：唯一官方 EasyQuant 再尝试（10GiB/900s）——构建与激活搜索完成，CAL64 未过原终端门	
+80	yes	# R80：R79 剩余误差机制与官方剩余权杆调查（新建模=0）	
+81	yes	# R81：源端官方网格假量化蒸馏的可行性（仅研究 + 一份 parent 审查稿，未开始训练）	
+82	yes	# R82 Report: unique official-grid QAT distillation, then official MinMax	
+83	yes	# R83 Report: unique official MinMax of the already-exported R82 student	
+84	yes	# R84 Report: unique official MinMax of the already-exported student, then CAL64	
+85	yes	# R85 Report: residual comparison, R82 implementation audit, remaining-path survey	

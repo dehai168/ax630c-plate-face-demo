@@ -1,0 +1,107 @@
+{
+  "workflow": "C",
+  "id": "C-PF-SSH-001",
+  "generated_at": "2026-11-17T10:43:35+08:00",
+  "timezone": "Asia/Shanghai (UTC+8)",
+  "hypothesis": "Existing SSH to the last-documented board address can support read-only health checks.",
+  "hypothesis_result": "NOT_SUPPORTED_BY_CURRENT_MEASUREMENT",
+  "status": "BLOCKED_NO_REACHABLE_EXISTING_SSH",
+  "serial_opened": false,
+  "dtr_rts_toggled": false,
+  "sshd_started_or_enabled": false,
+  "ssh_config_or_known_hosts_modified": false,
+  "wide_scan": false,
+  "box_files_written_only": true,
+  "pc_files_written": false,
+  "endpoint": {
+    "source": "Archives only: R43 REPORT.md / summary.json last measured 2026-11-13T15:51:52–15:55:13+08:00; board eth0=10.100.100.101/24 operstate=up, gateway 10.100.100.1. Windows 以太网 192.168.151.152/24 via 192.168.151.1. Historical username root from public recovery reports. Port 22 is the default; no non-22 listen port is documented. Temporary historical second address 192.168.151.200 (earlier RAM sshd recovery) was recorded but not probed (not the single target). 10.30.25.73 labeling machine and 10.30.25.10 training machine excluded. 192.168.151.152 is the PC, not the board. R48 later that day was a new boot; IP/sshd were not reconfirmed after that boot. R37/R38 historically recorded no sshd/dropbear PID and no TCP/22 listener at that earlier time.",
+    "address": "10.100.100.101",
+    "port": 22,
+    "historical_username": "root",
+    "classification": "LAST_DOCUMENTED_NOT_PROVEN_CURRENT",
+    "secrets_in_this_record": false
+  },
+  "vault": {
+    "skill_loaded": true,
+    "installed_vault_list_tool": false,
+    "passwords_retrieved": false,
+    "passwords_or_keys_exposed": false,
+    "credential_files_grepped": false,
+    "note": "No installed Vault/list connector was present in this executor catalog (a miss is not proof the service has no catalog entry). Auth was never reached; no Secure Form was requested from the user. Future password use still requires vault procedure or a parent-supplied Secure Form after reachability exists."
+  },
+  "machine": {
+    "machineId": "697781b2-8ff0-4a80-a5ef-b65276461177",
+    "label": "level",
+    "connected": true
+  },
+  "commands": [
+    {
+      "at": "2026-11-17T10:39:59+08:00",
+      "where": "box",
+      "what": "Froze C/BOARD_SSH_READONLY_CONTRACT.json and set root active_work to C-PF-SSH-001",
+      "contract_sha256": "e0ad0d7b539399e23513db9b1ad01a59343a25d9a2391ada9a87e41d59ed4ccb"
+    },
+    {
+      "at": "2026-11-17T10:41:13+08:00",
+      "where": "machine level",
+      "what": "Existing OpenSSH client inventory, ssh-keygen -F only for 10.100.100.101 (presence, no key printed), Get-NetIPAddress, Test-NetConnection 10.100.100.101:22 only",
+      "elapsed_approx_s": 42.7,
+      "ssh_client": "C:\\WINDOWS\\System32\\OpenSSH\\ssh.exe",
+      "known_hosts_10.100.100.101": false,
+      "known_hosts_bracket_22": false,
+      "pc_ipv4_observed": [
+        "以太网 192.168.151.152/24",
+        "以太网 6 169.254.10.141/16",
+        "本地连接* 10 169.254.190.12/16",
+        "本地连接* 1 169.254.58.144/16",
+        "WLAN 169.254.228.103/16"
+      ],
+      "ping_succeeded": false,
+      "tcp_22_succeeded": false,
+      "remote_address": "10.100.100.101",
+      "interface": "以太网"
+    },
+    {
+      "at": "2026-11-17T10:42:19+08:00",
+      "where": "machine level",
+      "what": "Local-only Get-NetRoute/Get-NetAdapter read; no additional host probes",
+      "ethernet_status": "Up",
+      "routes_relevant": [
+        "以太网 dest=192.168.151.0/24 next=0.0.0.0 metric=256",
+        "以太网 dest=0.0.0.0/0 next=192.168.151.1 metric=256"
+      ],
+      "specific_10.100.100.0_24_route": false,
+      "path_to_target_is_default_via": "192.168.151.1 (same pattern as R43)"
+    }
+  ],
+  "connectivity": {
+    "icmp_echo_to_single_target": false,
+    "tcp_22_to_single_target": false,
+    "ssh_login_attempted": false,
+    "ssh_auth_succeeded": false,
+    "reason_login_not_attempted": "TCP/22 failed; StrictHostKeyChecking would also have no known_hosts entry. Did not disable host-key checks, did not write known_hosts, did not timeout-login anyway."
+  },
+  "health_checks": {
+    "hostname": "NOT_MEASURED",
+    "uname": "NOT_MEASURED",
+    "uptime": "NOT_MEASURED",
+    "proc_mounts": "NOT_MEASURED",
+    "ext4_errors_count": "NOT_MEASURED",
+    "kernel_error_logs": "NOT_MEASURED",
+    "df": "NOT_MEASURED",
+    "historical_p14_errors_count_2168_reused_as_current": false,
+    "new_io_error_observed": false
+  },
+  "not_tested": [
+    "SSH authentication (password or key)",
+    "Live host key vs known_hosts (no entry, no connection)",
+    "Whether sshd is present but unreachable due to L3/gateway",
+    "Gateway 192.168.151.1 or 10.100.100.1 reachability (not probed; single-target policy)",
+    "Temporary historical address 192.168.151.200",
+    "Serial path (forbidden this task)",
+    "Current ext4 errors_count / mounts / df / uname",
+    "NPU / model / video / 42 / 52 reruns"
+  ],
+  "next_real_dependency": "A currently reachable existing SSH service on the AX630C, reachable from machine level at 192.168.151.152, without enabling a new service or opening serial. If the live address is no longer 10.100.100.101 after the R48 reboot, the current existing IP/port must be identified from a non-scan source (user/parent confirmation of the live endpoint). After reachability, host key is not in known_hosts, so adding it needs explicit authorization (this task will not write known_hosts or disable checks). Vault list is not installed in this executor; password auth, if later required, goes through parent/vault/Secure Form. Do not re-ask the user for COM3 or a known password now.",
+  "cancels_serial_as_full_line_blocker": true
+}

@@ -1,0 +1,363 @@
+{
+  "updated_Asia_Shanghai": "2026-11-17T10:12:34.772620+08:00",
+  "workflow": "B",
+  "batch_scope": "B17 publichelp1+modelCLI1 consumed; sampleforwards0/64; no repaircalls",
+  "tasks": [
+    {
+      "id": "B01",
+      "priority": 0,
+      "status": "DONE",
+      "dependencies": [],
+      "ready": false,
+      "blocker": null,
+      "next_action": "Model/input/operator binding completed",
+      "gate": "No inference; source hashes unchanged",
+      "evidence": [
+        "ARTIFACT_INDEX.json",
+        "MODEL_ALIGNMENT.json",
+        "INPUT_BYTE_ALIGNMENT.json"
+      ]
+    },
+    {
+      "id": "B02",
+      "priority": 0,
+      "status": "DONE",
+      "dependencies": [
+        "B01"
+      ],
+      "ready": false,
+      "blocker": null,
+      "next_action": "64x19x3 layer metrics and channel reductions computed; raw manifests rehashed automatically as next ready task",
+      "gate": "No training/build; CPU2 RSS2GiB",
+      "evidence": [
+        "LAYER_METRICS.json",
+        "RAW_INTEGRITY_VERIFICATION.json"
+      ]
+    },
+    {
+      "id": "B03",
+      "priority": 0,
+      "status": "DONE",
+      "dependencies": [
+        "B02"
+      ],
+      "ready": false,
+      "blocker": null,
+      "next_action": "FP32 code arithmetic audit resolves false FP64 weight/bias mismatch",
+      "gate": "Compare matching source, no deployed quantizer",
+      "evidence": [
+        "ROUNDING_PRECISION_AUDIT.json"
+      ]
+    },
+    {
+      "id": "B04",
+      "priority": 0,
+      "status": "DONE",
+      "dependencies": [
+        "B02"
+      ],
+      "ready": false,
+      "blocker": null,
+      "next_action": "Existing compilerdebug input joined; single-image source/student drift measured",
+      "gate": "No new model calls; do not call debug sample CAL64",
+      "evidence": [
+        "STUDENT_FLOAT_RAW_AVAILABILITY.json"
+      ]
+    },
+    {
+      "id": "B05",
+      "priority": 1,
+      "status": "DONE",
+      "dependencies": [
+        "B04"
+      ],
+      "ready": false,
+      "blocker": null,
+      "next_action": "Completed existing archive analysis; see attached evidence",
+      "gate": "Existing arrays only; no inference/compile/train, CPU<=2 RSS<=2GiB; stop on ambiguous layout/input mismatch",
+      "evidence": [
+        "STUDENT_FLOAT_RAW_AVAILABILITY.json",
+        "OFFICIAL_PRECISION_STATUS.json",
+        "SINGLE_DEBUG_VECTOR_DECOMPOSITION.json"
+      ]
+    },
+    {
+      "id": "B06",
+      "priority": 1,
+      "status": "DONE_DIAGNOSTIC64_NOT_REPAIR",
+      "dependencies": [
+        "B04"
+      ],
+      "ready": false,
+      "blocker": null,
+      "next_action": "Completed accepted unique64 diagnostic; originalR84 rejection unchanged",
+      "gate": "Single hypothesis, immutable64, no train/build; not STE+MinMax retry",
+      "evidence": [
+        "FUTURE_EXPERIMENT_PROPOSAL_IN_QUEUE",
+        "BASELINE_COMPARISON.json",
+        "/workspace/cn_val_su/v25/delivery_20261117/B/B11/REPORT.md"
+      ]
+    },
+    {
+      "id": "B07",
+      "priority": 2,
+      "status": "DONE",
+      "dependencies": [
+        "B03"
+      ],
+      "ready": false,
+      "blocker": null,
+      "next_action": "Completed existing archive analysis; see attached evidence",
+      "gate": "Read-only archived public sources; no internalAPI injection, no configs/build",
+      "evidence": [
+        "WEIGHT_BIAS_FORMULA_AUDIT.json",
+        "/workspace/cn_val_su/v25/optimization_round74/PUBLIC_S8_GRID_AND_ADD_SEARCH.json",
+        "OFFICIAL_ARITHMETIC_SEMANTICS.json"
+      ]
+    },
+    {
+      "id": "B08",
+      "priority": 2,
+      "status": "BLOCKED_FOR_BUILD",
+      "dependencies": [],
+      "ready": false,
+      "blocker": "No new target-support or causal repair evidence",
+      "next_action": "Do NOT retry MinMax/EasyQuant/STE+MinMax/firstsplit or R55/R57; only reassess precision capability if genuinely new official evidence appears",
+      "gate": "Any future experiment needs ten fields and single hypothesis",
+      "evidence": [
+        "OFFICIAL_PRECISION_STATUS.json"
+      ]
+    },
+    {
+      "id": "B09",
+      "priority": 1,
+      "status": "HANDOFF_TO_PARENT_A_C",
+      "dependencies": [],
+      "ready": false,
+      "blocker": "Independent workflow ownership",
+      "next_action": "Continue A/C integration in parallel; no repository or board work by B",
+      "gate": "Color CAL64FAIL prevents release, not integration/archive work",
+      "evidence": [
+        "BASELINE_COMPARISON.json"
+      ]
+    },
+    {
+      "id": "B10",
+      "priority": 1,
+      "status": "DONE",
+      "dependencies": [
+        "B05",
+        "B07"
+      ],
+      "ready": false,
+      "blocker": null,
+      "next_action": "Archived intermediate output arrays compared; identity not CAL64, remains compile check not acceptance",
+      "gate": "Existing compilerdebug arrays only, CPU2/RSS2GiB, no model execution, ambiguous sample identity staysUNKNOWN",
+      "evidence": [
+        "/workspace/cn_val_su/v25/optimization_round84/work/candidate_build/compiler/debug/subgraph_npu_0/b1",
+        "OFFICIAL_ARITHMETIC_SEMANTICS.json",
+        "COMPILER_DEBUG_SAVED_COMPARISON.json"
+      ]
+    },
+    {
+      "id": "B11",
+      "priority": 0,
+      "status": "DONE_DIAGNOSTIC64_NOT_REPAIR",
+      "owner": "parent B coordinator",
+      "dependencies": [
+        "B05",
+        "B07",
+        "B10"
+      ],
+      "ready": false,
+      "blocker": null,
+      "next_action": "Completed accepted unique64 diagnostic; originalR84 rejection unchanged",
+      "gate": "No new training/compile/inference this batch; any later experiment separately frozen and logged; permanent gates unchanged",
+      "evidence": [
+        "STUDENT_FLOAT_RAW_AVAILABILITY.json",
+        "SINGLE_DEBUG_VECTOR_DECOMPOSITION.json",
+        "NEXT_TASK_QUEUE.json.future_proposals",
+        "/workspace/cn_val_su/v25/delivery_20261117/B/B11/REPORT.md"
+      ]
+    },
+    {
+      "id": "B12",
+      "priority": 1,
+      "status": "DONE",
+      "dependencies": [
+        "B11"
+      ],
+      "ready": false,
+      "blocker": null,
+      "next_action": "Auto-completed saved-only training-vs-official grid transfer audit; no further calls",
+      "gate": "All64 retained, no tuning",
+      "evidence": [
+        "/workspace/cn_val_su/v25/delivery_20261117/B/B11/TRAINING_OFFICIAL_RANGE_TRANSFER.json"
+      ]
+    },
+    {
+      "id": "B13",
+      "priority": 1,
+      "status": "DONE_SAVED_ONLY_PARTIAL_ORIGIN_UNKNOWN",
+      "dependencies": [
+        "B11",
+        "B12"
+      ],
+      "ready": false,
+      "blocker": null,
+      "next_action": "PPQ/exportscale exactmatch established; actual calibrationobserver origin unresolved, advanceB14",
+      "gate": "CPU<=2/RSS<=2GiB, raw/read-only metadata only; no build/train/inference; no failed-case parameterselection",
+      "evidence": [
+        "/workspace/cn_val_su/v25/delivery_20261117/B/B11/ACTIVATION_SCALE_ENDPOINT_AUDIT.json",
+        "/workspace/cn_val_su/v25/optimization_round74/public_source/axnn/quant/ppq/quantization/observer/range.py",
+        "/workspace/cn_val_su/v25/optimization_round73/REFINE_SCALE_SOURCE_SEARCH.json",
+        "/workspace/cn_val_su/v25/delivery_20261117/B/B11/RANGE_METADATA_PROVENANCE.json"
+      ]
+    },
+    {
+      "id": "B14",
+      "priority": 1,
+      "status": "DONE_ZERO_CALL64_INPUT_RECONSTRUCTION_EXACT",
+      "dependencies": [
+        "B13"
+      ],
+      "ready": false,
+      "blocker": null,
+      "next_action": "64stagewise inputdiff0; canonicaldoublecolor evidence delivered; retainactualruntimewitnessgap",
+      "gate": "CPU<=2 RSS<=2GiB; label-free frozenPNG/raw metadata only, zero modelcalls/train/build, no edits/splitchanges; actualImageLoader execution unobserved staysUNKNOWN",
+      "evidence": [
+        "/workspace/cn_val_su/v25/optimization_round68/CALIBRATION_ARCHIVE_MEMBER_MANIFEST.json",
+        "/workspace/cn_val_su/v25/optimization_round68/INPUT_LINEAGE_FROZEN_BEFORE_INFERENCE.json",
+        "/workspace/cn_val_su/v25/delivery_20261117/B/B11/RANGE_METADATA_PROVENANCE.json",
+        "/workspace/cn_val_su/v25/delivery_20261117/B/B14/REPORT.md"
+      ]
+    },
+    {
+      "id": "B15",
+      "priority": 1,
+      "status": "DONE_ONE_ADDITIONAL_ZERO_CALL_MECHANISM",
+      "dependencies": [
+        "B14"
+      ],
+      "ready": false,
+      "blocker": null,
+      "next_action": "Staticfrontendopset/default migration accounted; no computationalconfigrepairidentified; do notlooprehash",
+      "gate": "Zero newmodelcall/train/build",
+      "evidence": [
+        "/workspace/cn_val_su/v25/delivery_20261117/B/B15/FROZEN_CONTRACT.json",
+        "/workspace/cn_val_su/v25/delivery_20261117/B/B15/SCHEMA_ADJUDICATION.json"
+      ]
+    },
+    {
+      "id": "B16",
+      "priority": 1,
+      "status": "DONE_RESEARCH_EXACT_PREOBSERVER_GAP",
+      "dependencies": [
+        "B14",
+        "B15"
+      ],
+      "ready": false,
+      "blocker": null,
+      "next_action": "Researchcomplete; exactsupportgap saved; no automaticnumericexperiment.",
+      "gate": "Any experiment10fields singlehypothesis; no privateAPI/license/SDKedits; gates/golden/splitspermanent",
+      "evidence": [
+        "/workspace/cn_val_su/v25/delivery_20261117/B/B16/REPORT.md",
+        "/workspace/cn_val_su/v25/delivery_20261117/B/B16/SUMMARY.json",
+        "/workspace/cn_val_su/v25/delivery_20261117/B/B16/CAPABILITY_MATRIX.json"
+      ]
+    },
+    {
+      "id": "B_TO_C_DOUBLE_CONTRACT",
+      "priority": 0,
+      "status": "EVIDENCE_DELIVERED_MODEL_IDENTITY_LIMITED",
+      "dependencies": [
+        "B14"
+      ],
+      "ready": false,
+      "blocker": "repo9d41 identity versuscanonicalecba unproven; Cownership",
+      "next_action": "Parent relay paths/functions/lineproof toC; bindrepo modelcontract beforeanyC++change",
+      "gate": "NoCfilechanges byB; no newinference",
+      "evidence": [
+        "/workspace/cn_val_su/v25/delivery_20261117/B/B14/CROSSLINE_DOUBLE_COLOR_EVIDENCE.json"
+      ]
+    },
+    {
+      "id": "B17",
+      "priority": 1,
+      "dependencies": [
+        "B16"
+      ],
+      "ready": false,
+      "status": "EXECUTED_ONCE_PUBLIC_CLI_FAILURE_STOPPED_NO_RETRY",
+      "blocker": "Actualstable8publicONNXrun NoneType.hardware_type sessionconstructionfailure beforecase0; numericalwitness unavailable.",
+      "next_action": "Officialsupportedusage/versionclarification only; no retry/internalfallback/patch. Preobservergap separate; C/Acontinue.",
+      "gate": "Separatebounded10item admission beforecalls; originalgolden/gatesfixed.",
+      "evidence": [
+        "/workspace/cn_val_su/v25/delivery_20261117/B/B17/REPORT.md",
+        "/workspace/cn_val_su/v25/delivery_20261117/B/B17/SUMMARY.json",
+        "/workspace/cn_val_su/v25/delivery_20261117/B/B17/model_STDERR.txt",
+        "/workspace/cn_val_su/v25/delivery_20261117/B/B17/OFFICIAL_SUPPORT_GAP.json"
+      ]
+    }
+  ],
+  "selected_next_executable": "Parent/C independentwork; Bpublicfloatentry andpreobservercapture await exactofficialsupport, no samefailed retry.",
+  "parent_continues_without_user_prompt": true,
+  "future_proposals": [
+    {
+      "status": "EXECUTED_ONCE_B11_DIAGNOSTIC64_COMPLETED",
+      "type": "future diagnostic inference, not repair/model selection",
+      "single_primary_hypothesis": "R84-vs-original CAL64 error has a measurable student-float functional-drift component that must be separated before selecting any repair axis.",
+      "ten_fields": {
+        "1_specific_question": "How large is studentfloat-originalfloat and officialR84-studentfloat on the fixed64, separately?",
+        "2_existing_evidence": "R84 changes18 initializers; matched debug natural input proves nonzero drift; full64 missing.",
+        "3_technical_hypothesis": "Combined R84 residual is not identical to student quantization-only residual.",
+        "4_mechanism": "Vector identity Qstudent-Fsource=(Fstudent-Fsource)+(Qstudent-Fstudent); metrics/norms do not add as causal percentages.",
+        "5_history_difference": "Not retraining/export/recompile/MinMax retry; measures missing existing-student float baseline only. R81/R82 single-attempt execution boundaries not a permanent ban on distinct diagnostics.",
+        "6_data": "Exactly existing CAL64 original inputbytes/all64, original golden and R84raw; no new samples/GT/split/tuning. CAL64 calibration overlap remains explicit.",
+        "7_expected_improvement": "Identifiability/evidence completeness only; no promised accuracy improvement, no candidate selection.",
+        "8_possible_degradation": "No model changes so no deployment degradation; risk calibration-side overinterpretation and near-tie nondeterminism; record them.",
+        "9_budget": "Future only: CPU<=2, RSS<=2GiB, wall120s, batch1, exactly64 ONNXCPU calls, no compiler/trainer; stop on cap without retry.",
+        "10_success_failure_earlystop": "Success=all64 sameinput hashes, shape finite raw outputs + separated metrics; failure=input/operator mismatch/incomplete outputs; earlystop=resource/wall/hash failure. Original CAL64 gates .03/.005/64 unchanged, no threshold selection or failed-case tuning."
+      }
+    }
+  ],
+  "policy_separation": {
+    "user_permanent_hard_constraints": [
+      "CAL64 max<=.03 mean<=.005 argmax64/64",
+      "No truth/split/protected data alterations",
+      "No productionv2.4 change",
+      "No board unsafe writes/repair/reboot; no mislabeling simulation as physical test",
+      "No blind repeat of disproved methods; no failed-case tuning"
+    ],
+    "prior_single_experiment_boundaries": [
+      "R81/R82 exactlyone training execution and frozen optimizer/loss/scales prevent retry of that experiment; do not automatically generalize to permanent ban on every future source-side hypothesis",
+      "R80/R85 no-admitted candidate is conditional on then-evidence/scope, not global project STOP",
+      "R55/R57 failed particular activation-boundary expressions, not all possible official precision capabilities"
+    ],
+    "current_batch_hard_scope": [
+      "training0 build0 compile0 newinference0",
+      "CPU2 RSS2GiB 15min",
+      "No private_root/credentials/PC/board/repository changes"
+    ],
+    "future_rule": "Every new experiment needs10 fields, single primary hypothesis, full logs/config/IO/hash/baseline/protection acceptance or rejection; this file does not authorize start."
+  },
+  "user_data_need_now": false,
+  "later_external_needs": "Only if natural-image/physical validation cannot use existing lawful splits: request new real failure samples or independent labels; board operation handled by C with safety conditions. Not a blocker for B05/B07.",
+  "auto_progression_this_batch": [
+    "B01",
+    "B02",
+    "B03",
+    "B04",
+    "B05",
+    "B07",
+    "B10",
+    "B11",
+    "B12",
+    "B13",
+    "B14",
+    "B15",
+    "B16",
+    "B17"
+  ],
+  "B11_forward_calls_completed": 64
+}

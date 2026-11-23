@@ -1,0 +1,263 @@
+{
+  "workflow": "A",
+  "title": "v2.5 OCR artifact index (archive recovery, first batch)",
+  "generated_at_Asia_Shanghai": "2026-11-17T09:39:15+08:00",
+  "timezone_label": "Asia/Shanghai (UTC+8)",
+  "scope": "Existing archived OCR reports/lists/models/inputs only. No new inference, training, compile, repo edit, board, browser, or user-PC access. private_root was not recursed. Credentials were not read. 32-group Python/C++ byte-identity and 176 offline integration results belong to workflow C and are not claimed here.",
+  "hash_verification_this_batch": {
+    "method": "sha256 of specifically listed public files only",
+    "all_matched_inventory": true,
+    "verified": [
+      {
+        "path": "/workspace/cn_val_su/finetune_original_v2/plate_rec_finetune.onnx",
+        "sha256": "45b005b56e92df83bbba2199e97935c7897ff23996905d6e6eed0b3ea3af4ae1",
+        "role": "accepted_finetune_ONNX",
+        "backend": "ONNX"
+      },
+      {
+        "path": "/workspace/cn_val_su/finetune_original_v2/best_rec_finetune.pt",
+        "sha256": "f3460c3485fa0b4c53217ab5604512dc4d119422823f3f5844fdd77caa27a272",
+        "role": "accepted_finetune_PyTorch",
+        "backend": "PyTorch",
+        "note": "Accepted student weights. Not the weaker production v2.4 teacher."
+      },
+      {
+        "path": "/workspace/cn_val_su/v25/optimization_round31/single_final_candidate_PENDING_CAL.pt",
+        "sha256": "0565e53aed3d0465b126c5d3b971737fad721f0c093caf20781c2625d8d90814",
+        "role": "R31_candidate_REJECTED_on_R32_val600",
+        "backend": "PyTorch",
+        "do_not_retry": true
+      },
+      {
+        "path": "/workspace/cn_val_su/v25/optimization_round32/canonical_val600_ROWS_FROZEN.json",
+        "sha256": "f3b71ed8459264fa5b32a3afef2163e05cda89b093f44f39a710b0607acab1e3",
+        "role": "canonical_val600_row_lock"
+      },
+      {
+        "path": "/workspace/cn_val_su/v25/optimization_round32/canonical_val600_original_prepare_uint8.npy",
+        "sha256": "9233e8a740c61b828b81f5b24f776518997663f7452309fa8daa9875acacf461",
+        "role": "canonical_val600_prepared_uint8"
+      },
+      {
+        "path": "/workspace/cn_val_su/v25/optimization_round4/decoder_core.py",
+        "sha256": "2abe5167acfac28f30b9589d344cf681cadf7cdba2ddceb0a86b36ae1828e6b9",
+        "role": "locked_CTC_prefix_beam_decoder"
+      },
+      {
+        "path": "/workspace/cn_val_su/v25/optimization_round5/train_locked_geometry_policy.json",
+        "sha256": "d3a8c30e8392707ca98037ec5b023189c81466593ccf833a4fd79bbb3a906033",
+        "role": "locked_geometry_TTA_gamma0.1"
+      }
+    ]
+  },
+  "package_checksums_from_existing_lists_not_rehashed_archives": [
+    {
+      "path": "/workspace/ax630c_plate_face_demo_v2.4_board.tar.gz",
+      "sha256": "29c7591f72f4f8bd0d45f0fdd10ab75e5df9210800e184c0f8937ff0028e0750",
+      "source": "/workspace/ax630c_plate_face_demo_v2.4_SHA256SUMS.txt",
+      "role": "production_v2.4_board_package",
+      "do_not_modify": true
+    },
+    {
+      "path": "/workspace/ax630c_plate_face_demo_v2.4_src.tar.gz",
+      "sha256": "e04ff400ad5f7709b3dbfe518262baa7f8b9bd3989f4dbfe29135e98935074ba",
+      "source": "SHA256SUMS and R33 report",
+      "role": "production_v2.4_source_archive",
+      "do_not_modify": true
+    }
+  ],
+  "frozen_inputs_and_gt_locks": [
+    {
+      "path": "/workspace/cn_val_su/v25/optimization_round32/INPUT_AND_ID_FREEZE_SHA256.json",
+      "role": "freeze_manifest"
+    },
+    {
+      "path": "/workspace/cn_val_su/v25/optimization_round32/canonical_val600_input_provenance.json",
+      "role": "per_row_source_and_prepared_SHA_plus_old_cpp_pixel_match",
+      "n": 600,
+      "matches_old_cpp_crop_pixels": "600/600"
+    },
+    {
+      "path": "/workspace/cn_val_su/v25/optimization_round32/held102_SELECTED_ROWS_FROZEN.json",
+      "sha256": "80eede0f62e2ef0b4fc922e05c825b63adddcda0bb87433374eae5277d930be4",
+      "role": "held_selected_input_rows"
+    },
+    {
+      "path": "/workspace/cn_val_su/v25/optimization_round32/held102_archived_selected_input_uint8.npy",
+      "sha256": "8356fb1eac777444df0e7f0d8b07e332c2f3245cbc29d32a34f49f47185bed15",
+      "role": "held102_archived_selected_inputs"
+    },
+    {
+      "path": "/workspace/cn_val_su/v25/optimization_round32/held4_FROZEN_detection_misses.json",
+      "sha256": "8d93c5916402c7bd53e2bdfc86ca2fce21ab674f295756259a57532ca31133c2",
+      "role": "held_original_4_detector_misses_kept_in_denominator_106"
+    },
+    {
+      "path": "/workspace/cn_val_su/v25/optimization_round32/authoritative_held106_GT_FROZEN.json",
+      "sha256": "44cde2890cfd195634fb63f7d7a6d34c1101109a54b3a2d20dcff29bee69455b",
+      "role": "held106_GT_lock_do_not_modify"
+    },
+    {
+      "path": "/workspace/cn_val_su/cn_val_su_export_v2.json",
+      "sha256": "37b5aac294fc71cd88fe18a6f4d6b7ff1744e6ea90f1336347de4fa0d7d6fcbf",
+      "role": "source_export_cited_in_R32_sha_file"
+    }
+  ],
+  "locked_decode_and_tta": [
+    {
+      "round": 4,
+      "path": "/workspace/cn_val_su/v25/optimization_round4/round4_report.md",
+      "result": "/workspace/cn_val_su/v25/optimization_round4/prefix_decoder_result.json",
+      "result_sha256_from_R32": "9957eb7d0b4c1fe2e1fe328a71c3a93277c8cfd28ea0821c0b602118b2c1d4c3",
+      "status": "RETAIN",
+      "params": {
+        "beam": 24,
+        "top5_plus_blank": true,
+        "alpha": 1.0,
+        "change_threshold": 2.0,
+        "repeat_requires_blank": true,
+        "max_prefix": 10,
+        "length_prior": "TRAIN4998_smoothed_only"
+      }
+    },
+    {
+      "round": 5,
+      "path": "/workspace/cn_val_su/v25/optimization_round5/round5_report.md",
+      "policy": "/workspace/cn_val_su/v25/optimization_round5/train_locked_geometry_policy.json",
+      "status": "RETAIN",
+      "params": {
+        "views": "original_plus_5_safe_insets",
+        "gamma": 0.1,
+        "canvas": "BGR_48x160_rightpad_128_norm_(x-127.5)/127.5_or_equivalent"
+      }
+    }
+  ],
+  "canonical_comparisons": [
+    {
+      "round": 32,
+      "paths": {
+        "report": "/workspace/cn_val_su/v25/optimization_round32/REPORT.md",
+        "summary": "/workspace/cn_val_su/v25/optimization_round32/summary.json",
+        "metrics": "/workspace/cn_val_su/v25/optimization_round32/canonical_val600_metrics.json",
+        "predictions_audit_only": "/workspace/cn_val_su/v25/optimization_round32/canonical_val600_EXACT_PREDICTIONS_AUDIT_ONLY.json",
+        "protocol_sha256": "2d3ec456ad959bcd33be6c11afdd98dd03b627e7b74551e11ef63895100a7207",
+        "evaluator_sha256": "f58b2a98d8097242ae9be33971a99992462174dcb4ea5a8219ea48349aca2910"
+      },
+      "decision": "REJECT_EXTERNAL_VAL_NO_RELEASE",
+      "note": "Same 600 GT-ROI crops, same preprocess, same locked prefix+TTA; accepted 554 vs R31 candidate 551. Recognition-only, not detector E2E."
+    }
+  ],
+  "key_round_reports": [
+    {
+      "round": 2,
+      "path": "/workspace/cn_val_su/v25/optimization_round2/round2_report.md",
+      "topic": "safe-geometry + feature/CTC distillation",
+      "decision": "REJECTED_NO_EXPORT_V25_STILL_BLOCKED"
+    },
+    {
+      "round": 3,
+      "path": "/workspace/cn_val_su/v25/optimization_round3/round3_report.md",
+      "topic": "bucket diagnosis + local blank adapter (not deployed)"
+    },
+    {
+      "round": 4,
+      "path": "/workspace/cn_val_su/v25/optimization_round4/round4_report.md",
+      "topic": "CTC prefix beam",
+      "decision": "RETAIN_SOFTWARE_GAIN_NO_BOARD_RELEASE"
+    },
+    {
+      "round": 5,
+      "path": "/workspace/cn_val_su/v25/optimization_round5/round5_report.md",
+      "topic": "geometry TTA",
+      "decision": "RETAIN_LOCKED_GAMMA_0.1"
+    },
+    {
+      "round": 6,
+      "path": "/workspace/cn_val_su/v25/optimization_round6/round6_report.md",
+      "topic": "tail 6/9 resample",
+      "decision": "beta=0 disabled, 0 TRAIN gain"
+    },
+    {
+      "round": 7,
+      "path": "/workspace/cn_val_su/v25/optimization_round7/round7_report.md",
+      "topic": "synthetic 6vs9 stress",
+      "decision": "0 flips, need real failures"
+    },
+    {
+      "round": 8,
+      "path": "/workspace/cn_val_su/v25/optimization_round8/round8_report.md",
+      "topic": "repeat verifier / forced 8-char insert",
+      "decision": "enabled=false, ordinary-2 NEV+2 rejected"
+    },
+    {
+      "round": 9,
+      "path": "/workspace/cn_val_su/v25/optimization_round9/round9_report_section.md",
+      "topic": "ROI/image integrity"
+    },
+    {
+      "round": 10,
+      "path": "/workspace/cn_val_su/v25/user_tail69_audit/REPORT.md",
+      "topic": "user tail 6/9 zip audit",
+      "decision": "0 recoverable GT"
+    },
+    {
+      "round": 11,
+      "path": "/workspace/cn_val_su/v25/optimization_round11/REPORT.md",
+      "topic": "NEV 8to7 diagnosis"
+    },
+    {
+      "round": "12-17",
+      "topic": "visual audit / crop expansion / small localizers",
+      "decision": "rejected or diagnostic-only"
+    },
+    {
+      "round": 18,
+      "path": "/workspace/cn_val_su/v25/optimization_round18/summary.json",
+      "decision": "REJECTED_NO_SEALED_EVAL"
+    },
+    {
+      "round": "19-20",
+      "topic": "tiny adapters stopped"
+    },
+    {
+      "round": "21-23",
+      "topic": "supervision/provenance audits, no training"
+    },
+    {
+      "round": "24-28",
+      "topic": "late-CNN / N-best / 40-step routes rejected"
+    },
+    {
+      "round": "29-30",
+      "topic": "new real data inventory; training not enabled in those rounds"
+    },
+    {
+      "round": 31,
+      "path": "/workspace/cn_val_su/v25/optimization_round31/REPORT.md",
+      "decision": "PASS_TRAIN_PENDING_PARENT_REVIEW then rejected on R32 val"
+    },
+    {
+      "round": 32,
+      "path": "/workspace/cn_val_su/v25/optimization_round32/REPORT.md",
+      "decision": "REJECT_EXTERNAL_VAL_NO_RELEASE"
+    },
+    {
+      "round": 33,
+      "path": "/workspace/cn_val_su/v25/optimization_round33/REPORT.md",
+      "topic": "production full-frame chain provenance; exact historical replay still blocked"
+    }
+  ],
+  "preprocess_contract_recovered_from_R33_and_R4_R5": {
+    "recognizer_input": "48x160, BGR, right pad value 128, width via ceil, normalization (x-127.5)/127.5 or equivalent [-1,1]",
+    "quad": "expand 0.02/0.04, perspective to (W,H) not (W-1,H-1), BORDER_REPLICATE; tall plates rotate; double-layer top floor(5h/12) bottom from floor(h/3), concat after resize",
+    "detector_defaults_from_source_not_certified_historical_runtime": "384x640 RGB/255 pad0, NMS class-agnostic IoU>0.45, detect thr 0.35",
+    "cpp_binary_bitwise_parity": "NOT claimed",
+    "evidence": "/workspace/cn_val_su/v25/optimization_round33/REPORT.md"
+  },
+  "explicitly_out_of_scope_this_index": [
+    "workflow B color quantization / CAL64 artifacts",
+    "workflow C 32-group Python/C++ byte identity and 176 offline integration tests",
+    "private_root contents",
+    "production v2.4 files under /opt"
+  ]
+}

@@ -1,0 +1,633 @@
+{
+  "workflow": "C",
+  "generated_at": "2026-11-17T09:38:19+08:00",
+  "timezone": "Asia/Shanghai (UTC+8)",
+  "selection_rule": "After each task, update status, check dependencies, start the next ready item that does not need user authorization. If a route is blocked, switch to another independent C item or leave A/B to proceed. Do not rerun rejected or already-passed synonymous tests. Do not lower gates.",
+  "user_data_needed_now": false,
+  "user_data_needed_later_not_blocking_this_queue": [
+    "OEM board model and official non-flash rescue/backup media, only if/when the system-image maintenance track is scheduled (R47).",
+    "Downtime and itemized authorization before any filesystem maintenance, remount, repair, or reboot.",
+    "Product decision on whether the R46 format-guard call-lineage change and retained legacy consular/WJ compatibility are accepted for an independent branch merge (engineering evidence already exists)."
+  ],
+  "items": [
+    {
+      "id": "C-INV-001",
+      "title": "Recover C-line artifact inventory, four-level baseline, safe board scope, and queue",
+      "priority": 1,
+      "dependencies": [],
+      "ready": false,
+      "status": "COMPLETED_THIS_BATCH",
+      "blocker": null,
+      "next_action": "None. Deliverables written under delivery_20261117/C/.",
+      "gate": "Evidence-only; no train/compile/inference/board/repo write.",
+      "evidence": [
+        "C/ARTIFACT_INDEX.json",
+        "C/BASELINE_COMPARISON.json",
+        "C/SAFE_BOARD_SCOPE.json",
+        "C/NEXT_TASK_QUEUE.json",
+        "C/STAGE_SUMMARY.md"
+      ]
+    },
+    {
+      "id": "C-HO-001",
+      "title": "Box-only archive handoff package for CloudAgent (original R40/R46 diffs + companion inc + SHA/apply/stop rules)",
+      "priority": 1,
+      "dependencies": [
+        "C-INV-001"
+      ],
+      "ready": false,
+      "ready_to_investigate": false,
+      "ready_to_apply": false,
+      "status": "COMPLETED_THIS_BATCH",
+      "blocker": null,
+      "next_action": "None. Package is at C/HANDOFF/. Parent may paste CLOUD_HANDOFF.md to the cloud thread. No upload from this agent.",
+      "gate": "Original patch bytes unchanged; no unpack-to-repo; no live checkout investigation; no compile/inference.",
+      "evidence": [
+        "C/HANDOFF/CLOUD_HANDOFF.md",
+        "C/HANDOFF/APPLY_MANIFEST.json",
+        "C/HANDOFF/R40_INTEGRATION_EXACT.diff",
+        "C/HANDOFF/R46_MINIMAL_DERIVED_FORMAT_FIX.diff",
+        "C/HANDOFF/SHA256SUMS.txt"
+      ]
+    },
+    {
+      "id": "C-BR-001",
+      "title": "CloudAgent: verify remote identity against v2.4 archive member SHAs, then apply frozen R40+R46 diffs on an independent non-production branch",
+      "priority": 1,
+      "dependencies": [
+        "C-INV-001",
+        "C-HO-001"
+      ],
+      "ready": false,
+      "status": "COMPLETED_CLOUD_REPORTED_STATIC_REPLAY_NO_LOCAL_REHASH",
+      "blocker": null,
+      "next_action": "None for this item. Static replay is registered from parent/cloud relay. Do not treat as NPU or production acceptance. Next already-started cloud work is C-AUD-001.",
+      "gate": "Cloud reported six-file final SHAs matched C/HANDOFF manifest; no compile/inference. This box did not rehash the remote commit.",
+      "evidence": [
+        "parent relay of cloud static replay",
+        "https://github.com/dehai168/ax630c-plate-face-demo/tree/cursor/v25-c-integration-audit-50d6",
+        "base 08eb9d6baa8e3c611dc8f3230df80fa1dcdecd07",
+        "final 3114764f0ee64ea576cc008a56748a0520194e81",
+        "C/HANDOFF/APPLY_MANIFEST.json expected_after_R46_final",
+        "C/NEXT_TASK_QUEUE.json cloud_branch_registration"
+      ],
+      "experiment_proposal_10": {
+        "1_problem": "C-line runtime and format patches exist only in isolated archive-derived trees. There is no reviewable independent git branch, and existing metadata does not record the live repo remote/branch/commit. Integration cannot proceed to source-controlled review without transferring already-frozen diffs.",
+        "2_existing_evidence": "R40/R46 isolated diffs and SHAs; v2.4 archive member SHAs verified against R40 gold. Remote URL https://github.com/dehai168/ax630c-plate-face-demo found by parent search; ref/commit still pending. Handoff package at C/HANDOFF/ copies original patch bytes. Live checkout was not investigated.",
+        "3_technical_hypothesis": "The frozen isolated diffs apply cleanly onto the v2.4 archive source identity. If CloudAgent finds the live repository commit matches that archive, the same diffs can be committed on a new non-production branch without changing behavior beyond what R40+R46 already measured.",
+        "4_why_it_may_work": "This is transfer of already-built and already-tested derived sources into version control, not a new algorithm, threshold, or model. R40 and R46 already compiled and executed the derived trees in isolation.",
+        "5_difference_from_historical_failures": "Not a new quantization or training run; not a rerun of 176/32/54/R50; not a board write; not a claim that color5 NPU or video will pass; not a production merge; not relaxing format gates or inventing legal labels.",
+        "6_dataset": "None. Source and diffs only. No val/held/user50/GT, no protected images, no new synthetics, no models in the branch.",
+        "7_expected_improvement": "A named independent branch and commit whose file hashes match the isolated derived sources, enabling later review and (only after product approval) controlled integration. No accuracy metric is expected to change in this step.",
+        "8_possible_degradation": "If the live repo diverges from the archive, a forced apply could silently drop or conflict production changes. Mitigation: stop on divergence; never modify the production checkout or deployed v2.4. Format-guard call counts already change for newly legal/illegal special strings; that change must remain visible, not be hidden.",
+        "9_time_and_memory_budget": "CloudAgent: short identity + apply + commit. Follow-up box static QA only: CPU<=2, RSS<=2GiB, 15 minutes, hash/diff only, no compile or inference.",
+        "10_success_fail_stop": "Success: independent branch created; expected files only; hashes match isolated R40+R46 derived sources; v2.4 production artifacts and the live production checkout remain unmodified; no model run. Fail: patch does not apply, hashes diverge, or unexpected files change. Early stop: production overwrite risk, secrets in git remotes/config that must not be copied into reports, or inability to establish repo identity. Do not invent additional code fixes in this step."
+      },
+      "ready_to_investigate": false,
+      "ready_to_apply": false
+    },
+    {
+      "id": "C-AUD-001",
+      "title": "Cloud already-started read-only interface / switch / video-NPU dataflow audit (no compile, inference, or code fix)",
+      "priority": 2,
+      "dependencies": [
+        "C-BR-001"
+      ],
+      "ready": false,
+      "ready_to_investigate": false,
+      "ready_to_apply": false,
+      "status": "DONE_STATIC_WITH_ERRATUM",
+      "blocker": null,
+      "next_action": "None. Static read-only dataflow audit is complete with erratum. Do not relaunch. Not NPU/video/production acceptance.",
+      "gate": "DONE_STATIC_WITH_ERRATUM. Original must be read together with the erratum. Line 96 wrongly called repo 9d41 R84. Not an NPU or video pass.",
+      "evidence": [
+        "C/AUDIT_EVIDENCE/01-static-interface-audit.md",
+        "SHA256 47de55b082f0654828e427f850e703d4e85953725b8c2d9c59ca4bde27275aba",
+        "measured wc -l 103; parent described as 104-line report (same known discrepancy)",
+        "C/AUDIT_EVIDENCE/ERRATUM_01M7KKBRVQJ1MWYQ8YEHQEYSMG.md",
+        "C/AUDIT_EVIDENCE/01-static-interface-audit.CONTRACT.md",
+        "C/AUDIT_EVIDENCE/SOURCE_AND_SHA256SUMS.md",
+        "source asset 01M7KK699M8192RYNY3Q4K922D.md"
+      ],
+      "do_not_rerun": true
+    },
+    {
+      "id": "C-INT-001",
+      "title": "Box-only: package a CloudAgent branch brief (apply order, file list, non-goals) if CloudAgent is not immediately dispatched",
+      "priority": 2,
+      "dependencies": [
+        "C-INV-001"
+      ],
+      "ready": false,
+      "status": "COMPLETED_SUPERSEDED_BY_C-HO-001",
+      "blocker": null,
+      "next_action": "None. The CloudAgent brief is C/HANDOFF/CLOUD_HANDOFF.md.",
+      "gate": "Brief cites existing SHA/diffs only; no new inference.",
+      "evidence": [
+        "C/HANDOFF/CLOUD_HANDOFF.md"
+      ],
+      "ready_to_investigate": false,
+      "ready_to_apply": false
+    },
+    {
+      "id": "C-INT-002",
+      "title": "After an independent branch exists: source-level review of R46 format-guard lineage changes and retained WJ/old-consular compatibility; no silent production merge",
+      "priority": 3,
+      "dependencies": [
+        "C-BR-001"
+      ],
+      "ready": false,
+      "status": "DEFERRED_BRANCH_EXISTS_NO_NEW_EXPERIMENT_THIS_REGISTRATION",
+      "blocker": "Independent branch now exists, but this registration does not start a new review experiment. Product/protocol decision is still required before any later production merge. Current cloud work is the already-started read-only audit (C-AUD-001).",
+      "next_action": "Do not start here. Keep the format-guard lineage change visible for a later review after C-AUD-001 or an explicit product decision.",
+      "gate": "Document accept/reject of the patch for a future merge. No accuracy claim.",
+      "evidence": [
+        "/workspace/cn_val_su/v25/optimization_round46/FORMAT_DRIVEN_CALL_LINEAGE_CHANGES.json",
+        "/workspace/cn_val_su/v25/optimization_round46/SOURCE_CITED_FORMAT_CONTRACT_FROZEN.json"
+      ],
+      "ready_to_investigate": false,
+      "ready_to_apply": false
+    },
+    {
+      "id": "C-INT-003",
+      "title": "Do not rerun R40 176, R41 32 CPU ORT, R45/R46 synthetic video, or R50 color5 NPU numeric comparison unless a new distinct hypothesis is admitted",
+      "priority": 4,
+      "dependencies": [],
+      "ready": false,
+      "status": "ARCHIVED_DO_NOT_RERUN",
+      "blocker": "These are completed or, for R50, already failed under frozen gates.",
+      "next_action": "Keep evidence; do not synonymous retest.",
+      "gate": "New experiment requires a 10-item proposal and a hypothesis distinct from completed work.",
+      "evidence": [
+        "C/ARTIFACT_INDEX.json",
+        "C/BASELINE_COMPARISON.json"
+      ]
+    },
+    {
+      "id": "C-NPU-001",
+      "title": "Color5 NPU numeric acceptance on a candidate that has already passed original CAL64 gates (workflow B); do not rerun R50 on the same failed artifact",
+      "priority": 5,
+      "dependencies": [
+        "workflow_B_CAL64_pass_on_a_new_or_admitted_candidate"
+      ],
+      "ready": false,
+      "status": "BLOCKED_ON_B",
+      "blocker": "Static branch replay is not a color5 NPU numeric pass. Current bound color5 artifact still failed R50. Workflow B has not recorded a candidate meeting original CAL64 gates. Do not synonymous-rerun the failed artifact.",
+      "next_action": "Wait for B. Do not start a new NPU experiment in this registration.",
+      "gate": "Same frozen numeric gates as R50; tmpfs-only outputs; off-board durable capture; no /opt write; no production model replace.",
+      "evidence": [
+        "/workspace/cn_val_su/v25/optimization_round50/summary.json"
+      ]
+    },
+    {
+      "id": "C-VID-001",
+      "title": "Board complete video with real models, off-board hashed outputs; not synthetic InferEngine and not R36/R50 crop/buffer proofs",
+      "priority": 6,
+      "dependencies": [
+        "C-NPU-001",
+        "workflow_A_ocr_same_caliber_candidate_if_rec_changes",
+        "explicit_board_safety_authorization"
+      ],
+      "ready": false,
+      "status": "BLOCKED",
+      "blocker": "Board complete video is not done. Static patch replay and synthetic/R36/R50 evidence are not a board complete video pass.",
+      "next_action": "Do not start. The already-started C-AUD-001 is a read-only dataflow audit, not this video acceptance.",
+      "gate": "Real NPU video through the intended binary; reproducible off-board artifacts; no production modification.",
+      "evidence": [
+        "C/BASELINE_COMPARISON.json four_acceptance_levels.board_complete_video"
+      ]
+    },
+    {
+      "id": "C-PERF-001",
+      "title": "Production-caliber latency, memory, and stability measurements",
+      "priority": 7,
+      "dependencies": [
+        "C-VID-001"
+      ],
+      "ready": false,
+      "status": "BLOCKED",
+      "blocker": "No production video path yet. Existing R36/R41/R50 timings are not FPS/stability certificates.",
+      "next_action": "Do not start. Do not reuse 3.92s R36 diagnostic wall or R50 MemAvailable deltas as performance pass.",
+      "gate": "Original performance/stability requirements; bounded, safe board conditions.",
+      "evidence": [
+        "C/ARTIFACT_INDEX.json status_by_subsystem.latency_memory_stability"
+      ]
+    },
+    {
+      "id": "C-REL-001",
+      "title": "Production acceptance package and v2.4 rollback certification",
+      "priority": 8,
+      "dependencies": [
+        "workflow_A_ocr_gates",
+        "workflow_B_CAL64_and_color_rules",
+        "C-VID-001",
+        "C-PERF-001"
+      ],
+      "ready": false,
+      "status": "BLOCKED_NO_GO",
+      "blocker": "All release gates remain unpassed. Static cloud replay is not production acceptance.",
+      "next_action": "Keep v2.4 in production. Do not mark untested items as passed.",
+      "gate": "All four C levels plus A and B original standards; complete hashes; rollback ready.",
+      "evidence": [
+        "C/BASELINE_COMPARISON.json"
+      ]
+    },
+    {
+      "id": "C-IF-001",
+      "title": "Evidence-only: SHA-matched finetune tar members + old 3-class InferEngine packing (no trainer/compile/new inference)",
+      "priority": 1,
+      "dependencies": [],
+      "ready": false,
+      "ready_to_investigate": false,
+      "ready_to_apply": false,
+      "status": "COMPLETED_THIS_STAGE",
+      "blocker": null,
+      "next_action": "None. Evidence registered. Do not treat as interface closure or a code fix.",
+      "gate": "Evidence only. No unpack-as-repo, no live checkout, no NPU/new inference, no 176/32/43 rerun, no full-tree scan.",
+      "evidence": [
+        "C/ERRATA_STATIC_AUDIT_LINE96.md",
+        "C/INTERFACE_CONSISTENCY_EVIDENCE.json",
+        "C/NEXT_EXPERIMENT_PROPOSAL.json",
+        "C/INTERFACE_CONSISTENCY_STAGE.md"
+      ]
+    },
+    {
+      "id": "C-IF-002",
+      "title": "Parent review: single-hypothesis fail-closed change of old --color outs[0].size()>=3 to size()==3",
+      "priority": 1,
+      "dependencies": [
+        "C-IF-001"
+      ],
+      "ready": false,
+      "ready_to_investigate": false,
+      "ready_to_apply": false,
+      "status": "COMPLETED_CLOUD_REPORTED_ACCEPT_NO_RELEASE_NO_LOCAL_REHASH",
+      "blocker": null,
+      "next_action": "None for this item. Cloud landed the single-variable predicate on independent branch commit 2241e28. Recorded as accept_no_release. Not NPU2/video/production, not merge/PR, not locally rehashed. Do not reopen as a new code change.",
+      "gate": "Parent-relayed cloud result only. Other five source SHAs reported unchanged. map3 and empty --color HSV unchanged.",
+      "evidence": [
+        "C/NEXT_EXPERIMENT_PROPOSAL.json",
+        "C/INTERFACE_CONSISTENCY_EVIDENCE.json",
+        "C/CLOUD_NUMEL3_GUARD_REGISTRATION.json",
+        "parent relay of 01M7KKTKCM5H50BY3YY5G8YJEW.md"
+      ]
+    },
+    {
+      "id": "C-IF-003",
+      "title": "Double-layer color train input口径 remains unclosed; classify_color5 input change not executable",
+      "priority": 1,
+      "dependencies": [
+        "C-IF-001"
+      ],
+      "ready": false,
+      "ready_to_investigate": false,
+      "ready_to_apply": false,
+      "status": "CONTRACT_MERGED_CANONICAL_STITCH_PROVEN_REPO_9d41_TRAIN_UNKNOWN",
+      "blocker": "repo 9d41 training remains UNKNOWN. Canonical/R84-student stitch is now proven by consumed B14 evidence, but that does not bind 9d41 or admit R84.",
+      "next_action": "Use C-IF-004. Do not change C++ in this stage. Do not full-tree rescan.",
+      "gate": "Byte identity remains separate from inheritance. SU exception must be kept. Deploy has no source field.",
+      "evidence": [
+        "C/INTERFACE_CONSISTENCY_EVIDENCE.json",
+        "C/ERRATA_STATIC_AUDIT_LINE96.md",
+        "C/MODEL_INPUT_BINDING_MATRIX.json",
+        "B/B14/REPORT.md",
+        "B/B14/CROSSLINE_DOUBLE_COLOR_EVIDENCE.json"
+      ]
+    },
+    {
+      "id": "C-NUMEL-001",
+      "title": "Register cloud-completed classify_color size()>=3 to ==3 miswire guard (parent relay, no local rehash)",
+      "priority": 1,
+      "dependencies": [
+        "C-IF-002"
+      ],
+      "ready": false,
+      "ready_to_investigate": false,
+      "ready_to_apply": false,
+      "status": "COMPLETED_CLOUD_REPORTED_ACCEPT_NO_RELEASE_NO_LOCAL_REHASH",
+      "blocker": null,
+      "next_action": "None. Do not start a follow-up compile, NPU2 query, or repo edit from this registration.",
+      "gate": "accept_no_release. Not complete classify_color, runtime, NPU2, or video. No merge/deploy/PR.",
+      "evidence": [
+        "C/CLOUD_NUMEL3_GUARD_REGISTRATION.json",
+        "commit 2241e28c110f8a10b282619459743964e8b79d4e",
+        "src/plate_rec.cpp sha256 2f1eedd78dd5705e4400ede44027098224ca1cf5239bc0d3e98dfc3cb45857a0"
+      ]
+    },
+    {
+      "id": "C-IF-004",
+      "title": "Parent review: 10-field proposal to select color5 preprocess by explicit model contract (raw vs verified special-double stitch)",
+      "priority": 1,
+      "dependencies": [
+        "C-IF-001",
+        "C-IF-003"
+      ],
+      "ready": false,
+      "ready_to_investigate": true,
+      "ready_to_apply": false,
+      "status": "PENDING_PARENT_REVIEW_PROPOSAL_ONLY",
+      "blocker": "Parent has not authorized an offline pixel-compare or any C++ hook. Deploy source field is absent; predicted layer must not be treated as source GT. Failed R84 must not be enabled.",
+      "next_action": "Wait for parent review of the complete ten fields. If later authorized, first offline Python/C++ preprocess pixel check on existing TRAIN fixtures only. Do not invent a second concat helper. Do not apply code in this stage.",
+      "gate": "Complete 10 fields required before implementation review. Single variable only. TRAIN fixtures only; no val retune; do not rerun 32/213/176/43.",
+      "evidence": [
+        "C/COLOR_PREPROCESS_POLICY_PROPOSAL.json",
+        "C/MODEL_INPUT_BINDING_MATRIX.json",
+        "C/CONTRACT_MERGE_STAGE.md"
+      ]
+    },
+    {
+      "id": "C-IF-005",
+      "title": "Prepare frozen TRAIN preprocess fixtures for Cloud C++ merge_double pixel compare (identity only; no C++ run)",
+      "priority": 1,
+      "dependencies": [
+        "C-IF-004"
+      ],
+      "ready": false,
+      "ready_to_investigate": false,
+      "ready_to_apply": false,
+      "status": "COMPLETED_FIXTURE_IDENTITY_VALID_CPP_NOT_RUN",
+      "blocker": null,
+      "next_action": "Parent may dispatch Cloud to run a limited CPU merge_double helper compare against this store package. This registrar does not start that call. Do not full-build or rerun 176/32. Do not modify 2241e28.",
+      "gate": "This round accepts fixture identity only. Do not claim Python/C++ consistency. Do not change online preprocess or enable candidates.",
+      "evidence": [
+        "/cursor/stores/store-c5bcaa91-b7a1-451f-aa70-1f3949024884/v25-c-preprocess-fixtures/",
+        "/cursor/stores/store-c5bcaa91-b7a1-451f-aa70-1f3949024884/v25-c-preprocess-fixtures/README.md",
+        "/cursor/stores/store-c5bcaa91-b7a1-451f-aa70-1f3949024884/v25-c-preprocess-fixtures/preprocess_fixtures.tar.gz",
+        "archive sha256 a8df601e060874357cad83f947abcd8a71361a2e7816811de0b9b6a4122746d9",
+        "C/PREPROCESS_FIXTURE_HANDOFF.md",
+        "C/COLOR_PREPROCESS_PIXELCOMPARE_CONTRACT.json"
+      ]
+    },
+    {
+      "id": "C-IF-006",
+      "title": "Cloud CPU-only: compare existing C++ merge_double then resize96 to Python expected96 on the frozen fixtures",
+      "priority": 1,
+      "dependencies": [
+        "C-IF-005"
+      ],
+      "ready": false,
+      "ready_to_investigate": false,
+      "ready_to_apply": false,
+      "status": "DONE_OFFLINE_GEOMETRY_42_U8_F32_NON_NPU",
+      "blocker": null,
+      "next_action": "None for geometry. Do not dispatch a repeat geometry task. SU/online layer decision remain OPEN. Next item is parent-relayed C-IF-007, not started here.",
+      "gate": "Offline CPU helper geometry only. Not ORT-linked, not NPU, not video, not production, not an online preprocess change.",
+      "evidence": [
+        "C/IF006_EVIDENCE/GEOMETRY_EXECUTED.md",
+        "SHA256 c55f02a163dacbb658290555605ee2d040ec7206c5499acab419fa4708c1acfe",
+        "source asset 01M7KMTBFNEHPNVB8W2F86R81Q.md",
+        "C/IF006_EVIDENCE/FIRST_RUN_REPORT.md (NOT_RUN_DEPENDENCY history retained)"
+      ],
+      "do_not_rerun": true,
+      "do_not_dispatch_new_geometry_task": true,
+      "do_not_announce_idle": true,
+      "code_commit": "2241e28c110f8a10b282619459743964e8b79d4e",
+      "cloudagent": "bc-e418510a-70f5-5a35-8635-d476608950d6",
+      "current_run": 6,
+      "first_run": {
+        "status": "NOT_RUN_DEPENDENCY",
+        "not_pixel_fail": true,
+        "reason": "C++ OpenCV missing; stopped before forward",
+        "report": "C/IF006_EVIDENCE/FIRST_RUN_REPORT.md",
+        "contract": "C/IF006_EVIDENCE/FIRST_RUN_CONTRACT.md",
+        "source_assets": [
+          "01M7KMGQ274TXD79113JJQ5HS0.md",
+          "01M7KMGQ27GAA5315GVJ5421NM.md"
+        ]
+      },
+      "environment_prep": {
+        "status": "DONE",
+        "apt_packages": 56,
+        "download_bytes": 39899310,
+        "download_mb_reported": 39.9,
+        "disk_delta_bytes": 155803648,
+        "install_about_seconds": 5,
+        "opencv_runtime": "4.6.0",
+        "fixture_generator_opencv": "5.0.0",
+        "interpolation_unchanged": true
+      },
+      "pixel_measurement": {
+        "status": "DONE_OFFLINE_42_U8_AND_F32",
+        "u8_pixel_and_png_sha": "42/42 (double 21, single 21, SU 0)",
+        "f32_bgr_nchw_u8_div255_chw_sha": "42/42 identical, max_ULP 0",
+        "ort_linked": false,
+        "npu": false,
+        "helper_sha256": "2906c185fc124ee76f905f9f208a418f6719b925b92eed91a330efe341560c09",
+        "harness_compile_seconds": 1.02,
+        "compare_seconds": 32.721,
+        "negative_control_raw96_double": "21 images, differing pixels 9183-9216; recorded only, no retune",
+        "still_open": [
+          "SU exception (0 in this manifest)",
+          "online layer decision for stitch"
+        ]
+      },
+      "attribution": "parent_relay_of_cloud_run6_result; this registrar did not rerun the harness or rehash remote outputs",
+      "executed_run": 6,
+      "first_run_retained_not_rewritten_as_pixel_fail_retry": true
+    },
+    {
+      "id": "C-IF-007",
+      "title": "Parent-relayed next on same cloud: old 3-class classify_color actual function body (mock InferEngine, no model) miswire + HSV fallback; distinct from already-passed size()==3 predicate test",
+      "priority": 1,
+      "dependencies": [
+        "C-IF-006",
+        "C-NUMEL-001"
+      ],
+      "ready": false,
+      "ready_to_investigate": false,
+      "ready_to_apply": false,
+      "status": "DONE_OFFLINE_ACTUAL_FUNCTION_MOCK_ONLY",
+      "attribution": "parent_relay; already delivered to the user; archived here, not rerun",
+      "do_not_dispatch_from_this_registration": true,
+      "code_commit_expected_baseline": "2241e28c110f8a10b282619459743964e8b79d4e",
+      "blocker": null,
+      "next_action": "None for this item. Do not rewrite this mock as NPU actual inference.",
+      "gate": "ACCEPT_OFFLINE_FUNCTION_MOCK_ONLY. Six sources on 2241e28 unchanged.",
+      "evidence": [
+        "C/IF007_EVIDENCE/RESULT.md",
+        "SHA256 a98a671fa927fe8d6164954d3ce0843e694c7dc39d2762011fd7af6c54a9e5d9",
+        "C/IF007_EVIDENCE/CONTRACT.md",
+        "SHA256 a36361a061122263abd929609b08e28b8d272b7b8ee242c7e042a7c289bf0bbc",
+        "source 10-classify-color-mock-result.md / 09-classify-color-mock-contract.md"
+      ],
+      "dispatch_confirmed_by_parent": true,
+      "cloud_agent_id": "bc-e418510a-70f5-5a35-8635-d476608950d6",
+      "cloud_run_id": "run-fbd33b50-0bcf-4d1c-a923-02b49de76c16",
+      "do_not_rerun": true,
+      "code_commit": "2241e28c110f8a10b282619459743964e8b79d4e",
+      "result_summary": "52 assertions PASS; plate_rec.cpp 193-219 sha256 59d18603093a3bd840e013022a666ffaf23376b71bde20a2a739ac0279a60aaa; adapter removed member qualifier only; legal len 3 matches old body; len 0/1/2/4/5/6/12 empty/run-false revert to original HSV; compile 0.818s run 0.008s",
+      "not_claimed": [
+        "model",
+        "NPU",
+        "runtime",
+        "video",
+        "production"
+      ]
+    },
+    {
+      "id": "C-PF-001",
+      "title": "Read-only connection preflight on user PC level: list COM/PnP and tools, do not open serial or toggle DTR/RTS",
+      "priority": 1,
+      "dependencies": [],
+      "ready": false,
+      "ready_to_investigate": false,
+      "ready_to_apply": false,
+      "status": "COMPLETED_PREFLIGHT_NO_SAFE_READONLY_CHANNEL",
+      "attribution": "executed this turn after frozen 10-field contract; t113u read-only authorization; parent already informed the user",
+      "blocker": null,
+      "next_action": "None for this preflight. Do not remasure historical 2168. Board fs/health reads wait on C-PF-002 dependency.",
+      "gate": "No serial open, no DTR/RTS, no board write/reboot, no credentials, no box paths on the machine. Historical connect is not current connect.",
+      "evidence": [
+        "C/BOARD_READONLY_PREFLIGHT_CONTRACT.json",
+        "C/BOARD_READONLY_PREFLIGHT_RESULT.json",
+        "C/BOARD_READONLY_PREFLIGHT_STAGE.md"
+      ]
+    },
+    {
+      "id": "C-PF-002",
+      "title": "If and only if a proven no-DTR/RTS already-authenticated read-only channel exists: read mounts, findmnt /opt /tmp /run, memory/uptime, p14 ext4 errors_count",
+      "priority": 2,
+      "dependencies": [
+        "C-PF-001"
+      ],
+      "ready": false,
+      "ready_to_investigate": false,
+      "ready_to_apply": false,
+      "status": "BLOCKED_NO_PROVEN_SAFE_CHANNEL",
+      "blocker": "Serial path still has no proven no-DTR/RTS already-authenticated channel (C-PF-001). Serial is no longer the full-line blocker. Independent C-PF-SSH-001 found last-documented board SSH 10.100.100.101:22 unreachable from machine level.",
+      "next_action": "Do not open COM3. Follow C-PF-SSH-001 next dependency (reachable existing SSH endpoint). Do not remasure historical 2168. Do not enable sshd.",
+      "gate": "Only /proc/mounts, findmnt /opt /tmp /run, memory/uptime, known p14 errors_count (read). No model/NPU, no full dmesg, no user data/credentials, no board file creation.",
+      "evidence": [
+        "C/BOARD_READONLY_PREFLIGHT_RESULT.json"
+      ],
+      "serial_not_full_line_blocker": true
+    },
+    {
+      "id": "C-PF-SSH-001",
+      "title": "Independent SSH read-only health preflight to the single last-documented AX630C address; do not open serial",
+      "priority": 1,
+      "dependencies": [],
+      "ready": false,
+      "ready_to_investigate": false,
+      "ready_to_apply": false,
+      "status": "BLOCKED_NO_REACHABLE_EXISTING_SSH",
+      "attribution": "executed this turn after frozen 10-field contract; user stated Ethernet+SSH exists; serial cancelled as full-line blocker",
+      "blocker": "Last-documented board address 10.100.100.101:22 is ICMP- and TCP/22-unreachable from connected machine level at 192.168.151.152/24 (2026-11-17T10:41:13+08:00). Post-R48 reboot IP was not reconfirmed. known_hosts has no entry. Login and health checks were not attempted.",
+      "next_action": "Wait for a currently reachable existing SSH endpoint (confirm live IP/port if it is no longer 10.100.100.101). Do not enable sshd, write known_hosts, disable host-key checks, open serial, or re-ask the user for COM3 or a known password.",
+      "gate": "Single documented target only. No service install/enable, no SSH config/known_hosts writes, no serial, no board writes, no 42/52 rerun.",
+      "evidence": [
+        "C/BOARD_SSH_READONLY_CONTRACT.json",
+        "SHA256 e0ad0d7b539399e23513db9b1ad01a59343a25d9a2391ada9a87e41d59ed4ccb",
+        "C/BOARD_SSH_READONLY_RESULT.json",
+        "SHA256 c2676638c6e655a94b1ffa38934e136a3ac31e6c8c8c2ec08a65ec790c716208",
+        "C/BOARD_SSH_READONLY_STAGE.md"
+      ]
+    },
+    {
+      "id": "C-PF-SSH-002",
+      "title": "Authorized COM3: add a temporary 192.168.151.x address on existing eth0, then SSH readonly health if a listener already exists",
+      "priority": 1,
+      "dependencies": [],
+      "ready": false,
+      "ready_to_investigate": false,
+      "ready_to_apply": false,
+      "status": "COMPLETED_TEMP_ADDR_ADDED_NO_SSH_LISTENER",
+      "attribution": "executed this turn under explicit user 11:27 authorization for COM3 + temporary address; not reboot/repair/production-file authorization",
+      "blocker": "Temporary 192.168.151.200/24 was added in RAM and is ICMP-reachable from level with matching board MAC. TCP/22 is not listening; sshd was not started.",
+      "next_action": "Do not start sshd, do not auto-rollback the working temp address, do not open serial to enable services, do not rerun 42/52. If an existing SSH listener appears, authenticate with serial-read host-key fingerprints in memory.",
+      "gate": "Not a release pass. Not NPU/video/model. Persistent files were not written.",
+      "evidence": [
+        "C/BOARD_SERIAL_TEMP_ADDR_SSH_CONTRACT.json",
+        "SHA256 7612b6311b5848575dc04062e3f551909a5e1da50e2650394e060786327dcf97",
+        "C/BOARD_SERIAL_TEMP_ADDR_SSH_RESULT.json",
+        "SHA256 430d393a3ebb3cd603084bbfbc192438bf9a7bf19d76ee6144034bfc115c0664",
+        "C/BOARD_SERIAL_TEMP_ADDR_SSH_STAGE.md",
+        "C/BOARD_SERIAL_TEMP_ADDR_SSH_COLLECT.md",
+        "C/BOARD_SERIAL_TEMP_ADDR_SSH_HOSTKEY_FPS.json"
+      ],
+      "temp_address": "192.168.151.200/24",
+      "original_ip_retained": "10.100.100.101/24",
+      "rollback_recorded_not_executed": "ip addr del 192.168.151.200/24 dev eth0",
+      "errors_count_p14_measured_now": 2168,
+      "ssh_auth_succeeded": false
+    }
+  ],
+  "immediately_executable_now": [
+    "Nothing further in this authorized scope. Do not enable sshd, do not auto-rollback 192.168.151.200, do not rerun 42/52, do not start A/B experiments. Status is completed-with-no-SSH-listener, not running."
+  ],
+  "does_not_depend_on_new_models": [
+    "C-AUD-001 already-started read-only audit (cloud; no compile/inference/code fix)",
+    "C-INT-002 later format-guard review (deferred; no new experiment in this registration)"
+  ],
+  "updated_at": "2026-11-17T11:38:26+08:00",
+  "repo_identity": {
+    "remote_url": "https://github.com/dehai168/ax630c-plate-face-demo",
+    "how_found": "Parent CloudAgent repository search; unique application repo.",
+    "branch": "cursor/v25-c-integration-audit-50d6",
+    "base_commit": "08eb9d6baa8e3c611dc8f3230df80fa1dcdecd07",
+    "final_commit": "3114764f0ee64ea576cc008a56748a0520194e81",
+    "v2_4_tag_peeled": "f848b7d5fe1470a91c684f4ba5b115451b675ea3",
+    "main_unchanged": true,
+    "status": "cloud_reported_static_replay_complete_identity_recorded",
+    "evidence_attribution": "Parent relay of cloud results. This box registration did not independently rehash the remote commit or inspect it locally. Do not claim a local commit review.",
+    "scope_caveat": "Required six source files were reported as SHA-matched to the handoff manifest. Ancestor history on main already includes 1711ff5 ONNX changes, so only those six files are aligned to the v2.4 archive identity; the whole repository is not claimed to be identical to the v2.4 archive."
+  },
+  "readiness_vocabulary": {
+    "ready_to_investigate": "Identity or packaging work can proceed (remote known, patches frozen).",
+    "ready_to_apply": "Required v2.4 base SHAs have been confirmed on a recorded remote commit; patches may be applied to an independent non-production branch.",
+    "do_not_use_ready_true_when_apply_is_blocked": true
+  },
+  "immediately_not_executable": [
+    "C-BR-001 apply (already completed on cloud; this box only registered the relay)",
+    "C-AUD-001 (already in progress on cloud; not launched here)",
+    "C-NPU-001 / C-VID-001 / C-REL-001 (release and board-video gates still unpassed)"
+  ],
+  "cloud_branch_registration": {
+    "registered_at": "2026-11-17T09:46:25+08:00",
+    "timezone": "Asia/Shanghai (UTC+8)",
+    "source": "parent_relay_of_cloud_static_replay_not_local_rehash",
+    "what_completed": "Independent-branch static no-drift patch replay. No compile, no inference.",
+    "not_claimed": [
+      "NPU actual inference pass",
+      "board complete video pass",
+      "production acceptance",
+      "local independent SHA re-verification of the remote commit",
+      "entire repo identical to v2.4 archive"
+    ],
+    "six_files_final_sha256_cloud_reported_match_to_handoff_manifest": [
+      {
+        "rel": "src/plate_rec.h",
+        "sha256": "ce144d54b501e0fa0386356bc452958bf2ad891b3004d9dd7e181626721cd185"
+      },
+      {
+        "rel": "src/plate_rec.cpp",
+        "sha256": "44fed46dc546443e7b24cc7bb171884c6eaa22d287a962a927d34e03d33af3da"
+      },
+      {
+        "rel": "src/main.cpp",
+        "sha256": "39db22bb0d7d7aa2fb4466f33320a6111baebb4219076e7948ddae3789cd23c8"
+      },
+      {
+        "rel": "src/color5_crop_policy.inc",
+        "sha256": "49508bca5c1f6abc323695f452d0a49205103d73dad57c09e2e7a4bd5858c1b6"
+      },
+      {
+        "rel": "src/filters.cpp",
+        "sha256": "f69c8649919f5c9d2ce915a4def6d061b9ecb1798d412d027c059324ada845d8"
+      },
+      {
+        "rel": "src/approved_special_format.inc",
+        "sha256": "6cf14ec7b6f74e2c178816d3d35fd7fb244dada418fac8393165a0bb560f7c5b"
+      }
+    ],
+    "next_cloud_stage_already_started": {
+      "id": "C-AUD-001",
+      "title": "Read-only interface / switch / video-NPU dataflow audit",
+      "constraints": "No compile, no inference, no code fix.",
+      "started_by": "parent/cloud; this registration does not launch a new experiment"
+    }
+  },
+  "project_in_progress": false,
+  "queue_is_idle": true,
+  "parent_exact_gap": "Board now has RAM address 192.168.151.200/24 reachable from level, but no TCP/22 listener. Do not start sshd from this executor. Do not ask the user for COM3 or a known password (serial was already authenticated). If the user expected SSH to be running, parent may need them to confirm or start it themselves; this task is not authorized to enable the service."
+}
