@@ -5,7 +5,8 @@
   可以用同 ABI 的 .so 自行替换。
 - OpenCV 4.10.0 —— Apache-2.0，静态链接。
 - HyperLPR3 模型（车牌检测/识别/颜色）—— Apache-2.0，https://github.com/szad670401/HyperLPR
-  `models/onnx/plate_rec_finetune.onnx` 与 `plate_color_finetune.onnx`（2026-11-07）从上述 v2.4 识别 / 颜色权重量化前的浮点模型微调而来，许可跟随 HyperLPR3。
+  `models/onnx/plate_rec_finetune.onnx`（2026-11-07）从上述 v2.4 识别权重量化前的浮点模型微调而来，许可跟随 HyperLPR3。
+  `models/onnx/plate_color_finetune.onnx` 的当前文件是本项目新训练的五色 CNN（`scripts/color_model_v2.py`），用来替换早先从 HyperLPR3 三色头扩展来的那一版。结构见该脚本和 `docs/finetune_20261107/optimization_report.md`。
 - yolov5-face 权重 yolov5n-face —— 上游代码为 GPL-3.0（https://github.com/deepcam-cn/yolov5-face），
   训练数据为 WIDER FACE（非商业研究用途）。仅供评估测试，商用前需更换或取得授权。
 - Noto Sans CJK —— SIL Open Font License 1.1（叠加文字字形，已预渲染进程序）。

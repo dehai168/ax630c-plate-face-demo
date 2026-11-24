@@ -15,7 +15,7 @@
 
 2026-11-07 入库一对权重，用来换掉 v2.4 的识别器 + 颜色网络。这是**成对替换**：微调后的识别器和五色网络一起用，不是在旧识别器和新识别器之间做分流。
 
-权重从原始 v2.4 HyperLPR3 rpv3 导出后再微调，原始参数全部继承。识别词表本来就有警、使、学、挂、港、澳、领，没有加新的识别输出。颜色网络由原来的 3 类（输出顺序蓝/绿/黄）扩成 5 类，输出顺序 **蓝/黄/绿/白/黑**。训练数据是特殊项目 train 4215，加上江苏苏牌回放 594（含增强视图，不是 594 张独立车牌）。完整过程、逐类计数和限制见 `docs/finetune_20261107/special_train_report.md`（数字来自同目录的 `finetune_metrics.json` 与 `onnx_validation.json`）。
+识别器从原始 v2.4 HyperLPR3 rpv3 导出后再微调，原始参数全部继承，文件 SHA256 为 `45b005b56e92df83bbba2199e97935c7897ff23996905d6e6eed0b3ea3af4ae1`。词表本来就有警、使、学、挂、港、澳、领，没有加新的识别输出。当前颜色文件是第二版五色 CNN，输出顺序 **蓝/黄/绿/白/黑**，细节见下文。训练数据是特殊项目 train 4215，加上江苏苏牌回放 594（含增强视图，不是 594 张独立车牌）。完整过程见 `docs/finetune_20261107/optimization_report.md` 和 `special_train_report.md`。
 
 裁图识别，特殊项目 val 489，ONNX 整牌完全匹配（同预处理下的原始 v2.4 权重为对照）：
 
@@ -29,19 +29,26 @@
 
 江苏苏牌 held 裁图 111 张：86.49% → 89.19%（99/111）。这份 SU held 参与了选模，不能当成完全没碰过的独立测试集。部署数字以 ONNX 为准；同一次 PyTorch 复核是 451/489 = 92.23%，差在一张新能源样本。
 
-颜色：五色网络单独 88.14%（431/489）；识别结果再加上车牌文字颜色规则的完整流程 94.68%（463/489）。94.68% 是规则后的流程，不是颜色网络本身。黄仍是短板，白/黑还没到计划里的 98%。
+困难样本续训试过 1 轮并已拒绝：特殊 val 总体掉到 91.21%（446/489）。识别器文件没有换。识别数字保持：总体 92.02%，普通 88.82%，新能源 92.55%，警 91.49%，使 96.67%，江苏 SU 89.19%。
 
 学、挂、港澳、领在这份 val 里只有极少条（学 1、挂 5、港澳 2、领 1）。验证里没有澳字符样本。这些牌型不能算已经解决。特殊项目标签里有 3133 条历史上是自动确认的，不能把整个训练集说成全量人工核验。
 
-**还没有量化，也没有 AX630C axmodel。** 板端 `plate_face_demo` 仍加载 v2.4 的 `plate_rec_*.axmodel` 和 3 类 `plate_cls_*.axmodel`。C++ 颜色头按 3 类、顺序蓝/绿/黄 读取；五色 ONNX 不能直接填进现在的 `--color`。等板子挂上后再做量化与上板测试。x86 上先用下面的裁图脚本。
+颜色网络在同一套 489 张、同一预处理上换了第二版。第一版把原始 3 类头扩成 5 类，纯网络 88.14%（431/489），江苏 SU 颜色 91.82%（101/110），规则后流程 94.68%（463/489）。当前 `plate_color_finetune.onnx` 约 3.3MB，是新的五色 CNN（`scripts/color_model_v2.py`），不是那个扩展头。外部接口没变：输入 `data`，NCHW `[1,3,96,96]`，BGR `/255`；输出 `output`，`[1,5]`，顺序蓝/黄/绿/白/黑。图内部自己做 BGR→RGB、双线性缩放到 48×192、再归一化到 [-1,1]，并含 Resize / Gather。调用方不要再做一遍这套变换。
+
+同一特殊 val，颜色网络本身：88.14% → 95.50%（467/489）。江苏 SU 颜色：91.82% → 96.36%（106/110）。各类纯网络召回：蓝 94.17%（97/103），黄 90.20%（46/51），绿 94.00%（94/100），白 97.89%（139/142），黑 97.85%（91/93）。
+
+已有文字规则冻住之后的完整颜色流程：94.68% → 95.71%（468/489）。95.71% 是规则后的流程，不是颜色网络本身。白的纯网络是 139/142，规则后是 136/142：现有文字规则仍会盖掉少量网络已经判对的白牌。规则没有按这份验证集重调。
+
+**还没有量化，也没有 AX630C axmodel。** 新颜色图要单独做板端算子和量化。板端 `plate_face_demo` 仍加载 v2.4 的 `plate_rec_*.axmodel` 和 3 类 `plate_cls_*.axmodel`。C++ 颜色头按 3 类、顺序蓝/绿/黄 读取；这份五色 ONNX 不能直接填进现在的 `--color`。等板子挂上后再做上板测试。x86 上先用下面的裁图脚本。
 
 | 文件 | SHA256 |
 |---|---|
 | `models/onnx/plate_rec_finetune.onnx` | `45b005b56e92df83bbba2199e97935c7897ff23996905d6e6eed0b3ea3af4ae1` |
-| `models/onnx/plate_color_finetune.onnx` | `9d41c7dc9ecffb9e93c2937b1d90e6094d3d2fe4586e716ebc383e62af52f1cf` |
-| 来源包 `original_mixed_finetune_20261107.tar.gz` | `c1d86ea45b6037a9c3fa0a396b4d66716da65d26b59e91620993ca39194e4f10` |
+| `models/onnx/plate_color_finetune.onnx`（颜色 v2） | `ecba573c49a847321def9106b25d6db756fd98ddd98c0909007d074e4f104360` |
+| 识别器来源包 `original_mixed_finetune_20261107.tar.gz` | `c1d86ea45b6037a9c3fa0a396b4d66716da65d26b59e91620993ca39194e4f10` |
+| 颜色 v2 来源包 `color_v2_20261107.tar.gz` | `b22a35557c30c432bc7042bb5fb13b35edbe59993bbf81edb132b8b7b971e4ab` |
 
-词表：`models/onnx/charset.json`（77 项，index 0 为 CTC blank）。输入与 v2.4 相同：识别 48×160、BGR、`(x-127.5)/127.5`，等比缩放到高 48、右侧用 128 填充；颜色 96×96、BGR、`/255`。
+词表：`models/onnx/charset.json`（77 项，index 0 为 CTC blank）。识别输入与 v2.4 相同：48×160、BGR、`(x-127.5)/127.5`，等比缩放到高 48、右侧用 128 填充。颜色外部输入仍是 96×96、BGR、`/255`；48×192 和 [-1,1] 在 ONNX 图内。报告：`docs/finetune_20261107/optimization_report.md`，以及同目录的 `special_train_report.md`、`color_metrics.json`、`pipeline_color_metrics.json`。
 
 ```sh
 # 依赖：onnxruntime、opencv-python、numpy。输入是车牌裁图，不是全图检测。
@@ -50,7 +57,7 @@ python scripts/infer_plate.py plate_crop.jpg --layer double \
   --points '[[x0,y0],[x1,y1],[x2,y2],[x3,y3]]' --models models/onnx
 ```
 
-`--points` 是相对输入宽高的百分比坐标（左上、右上、右下、左下）。脚本会做透视矫正；`--layer double` 时按上 5/12、下 2/3 横向拼接后再识别。stdout 是一行 JSON：`text`、`rec_confidence`、`color_network`（五色网络）、`color`（文字规则之后）。规则只看预测号码和层数：警→白，使/领/港/澳→黑，学/挂→黄，严格新能源 D/F 格式→绿；其余若网络给出白或黑，双层改为黄、单层改为蓝。
+`--points` 是相对输入宽高的百分比坐标（左上、右上、右下、左下）。脚本会做透视矫正；`--layer double` 时按上 5/12、下 2/3 横向拼接后再识别。颜色网络只接收脚本准备的 BGR 96×96 `/255`。stdout 是一行 JSON：`text`、`rec_confidence`、`color_network`（五色网络）、`color`（文字规则之后）。规则只看预测号码和层数：警→白，使/领/港/澳→黑，学/挂→黄，严格新能源 D/F 格式→绿；其余若网络给出白或黑，双层改为黄、单层改为蓝。这套规则会盖掉少量已经判对的白牌，见上面的 139/142 与 136/142。
 
 ## 0.4 v2.4 更新：单/双层双假设 + U16 车牌检测
 
@@ -193,7 +200,7 @@ ax630c_plate_face_demo/
 | 车牌字符识别 | plate_rec_rpv3_48x160.onnx / plate_rec_{npu1,npu2}.axmodel | 1x3x48x160 (BGR, (x-127.5)/127.5) | HyperLPR3 rpv3_mdict_160_r3.onnx（CTC，78 类） | Apache-2.0 |
 | 车牌字符识别（微调，仅 ONNX） | plate_rec_finetune.onnx + charset.json | 同上 | 由上一行 rpv3 权重微调，2026-11-07。与五色网络成对使用。评测见第 0.5 节。无 axmodel | Apache-2.0（继承 HyperLPR3） |
 | 车牌颜色 | plate_cls_96x96.onnx / plate_cls_{npu1,npu2}.axmodel | 1x3x96x96 (BGR, /255) | HyperLPR3 litemodel_cls_96x_r1.onnx（蓝/绿/黄，输出顺序蓝/绿/黄） | Apache-2.0 |
-| 车牌颜色（微调，仅 ONNX） | plate_color_finetune.onnx | 同上 | 由上一行 3 类网络扩成蓝/黄/绿/白/黑。与微调识别器成对使用。无 axmodel | Apache-2.0（继承 HyperLPR3） |
+| 车牌颜色（微调 v2，仅 ONNX） | plate_color_finetune.onnx | 外部 1x3x96x96 (BGR, /255)；图内 RGB、48x192、[-1,1] | 新五色 CNN（`scripts/color_model_v2.py`），输出蓝/黄/绿/白/黑。替换早先的 3→5 扩展头。含 Resize/Gather，无 axmodel。评测见第 0.5 节 | 本项目训练；见 NOTICE.md |
 
 **axmodel 的编译方式**：
 
@@ -353,7 +360,7 @@ python scripts/verify_axmodel_sim.py ...   # Pulsar2 仿真器：ONNX vs axmodel
   - 推流或推大小图给主机，走 RTSP 或私有协议。
 - **检测分辨率**：640x384 是在 720p 下兼顾小目标和速度定的。远处的小车牌或小人脸可能漏检。可以改分辨率或做 ROI 二次检测，但 NPU 耗时会跟着变。
 - **双层车牌**：拼接逻辑写好了，但测试视频里没有真实双层牌（CCPD 基本是单层蓝牌和绿牌），这条路径没有用真实数据验证过。
-- **颜色（板端 / 当前 C++）**：仍是蓝/绿/黄三类网络。白、黑主要靠文字规则和 HSV。五色 ONNX 已入库（第 0.5 节），输出顺序是蓝/黄/绿/白/黑，还没有量化，也还没有改 C++ 的 3 类映射，所以板端 demo 还不会用到它。
+- **颜色（板端 / 当前 C++）**：仍是蓝/绿/黄三类 axmodel。源码树里的五色 ONNX 已换成 v2 新架构（图内 Resize/Gather，外部输入仍是 96×96 BGR `/255`，输出顺序蓝/黄/绿/白/黑）。板端算子和量化还没做，demo 仍不会加载它。
 - **人脸 ID 切换**：ByteTrack 只用了运动信息和 IoU，没有外观特征。快速运动、遮挡后可能换 ID。要更稳可以加 ReID，或者针对车载场景调 `--track_lost` 和阈值。
 - **输出编码**：FFmpeg 没带 GPL 的 x264，mp4 用的是 mpeg4（MPEG-4 Part 2），大多数播放器能放。如果需要 H.264 文件，在 PC 上用 ffmpeg 转一下，或者改用 VENC。
 - **模型精度**：没有在车载实拍数据上评估过。上线前要用自己场景的数据评估，必要时微调或重新训练（尤其是人脸模型，见第 9 节的 license 问题）。

@@ -11,6 +11,12 @@ From the repo root:
 --points uses percentages of the input image size (0-100).
 Weights default to models/onnx/ (plate_rec_finetune.onnx, plate_color_finetune.onnx, charset.json).
 If those files sit next to this script, that directory is used instead. Override with --models.
+
+Color v2 keeps the same external graph I/O as the first 5-class ONNX, so this script still
+feeds BGR 96x96 /255 and reads 5 logits in order 蓝/黄/绿/白/黑. The v2 graph itself does
+BGR to RGB, a bilinear resize to 48x192, and [-1,1] (Resize and Gather are inside the ONNX).
+Do not apply that transform again before calling the session. Architecture reference:
+scripts/color_model_v2.py. The recognizer file is unchanged.
 """
 import argparse,json,math,re
 from pathlib import Path
