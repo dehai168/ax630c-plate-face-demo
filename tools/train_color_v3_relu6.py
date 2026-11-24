@@ -20,7 +20,7 @@ import numpy as np
 import torch
 from torch import nn
 from torch.nn import functional as F
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import DataLoader, Dataset, WeightedRandomSampler
 
 COLOR_NAMES = ["蓝", "黄", "绿", "白", "黑"]
 
@@ -57,17 +57,17 @@ class ConvBNReLU6(nn.Module):
 class ColorV3ReLU6(nn.Module):
     def __init__(self):
         super().__init__()
-        self.b1 = ConvBNReLU6(3, 32, stride=2)      # 96 -> 48
-        self.b2 = ConvBNReLU6(32, 64, stride=1)     # 48 -> pool 24
-        self.b3 = ConvBNReLU6(64, 96, stride=1)     # 24 -> pool 12
-        self.b4 = ConvBNReLU6(96, 128, stride=1)    # 12 -> pool 6
-        self.b5 = ConvBNReLU6(128, 160, stride=1)   # 6 -> GAP 1
+        self.b1 = ConvBNReLU6(3, 24, stride=2)      # 96 -> 48 -> pool 24
+        self.b2 = ConvBNReLU6(24, 48, stride=1)     # 24 -> pool 12
+        self.b3 = ConvBNReLU6(48, 96, stride=1)     # 12 -> pool 6
+        self.b4 = ConvBNReLU6(96, 128, stride=1)    # 6 -> pool 3
+        self.b5 = ConvBNReLU6(128, 128, stride=1)   # 3 -> GAP 1
         self.pool = nn.MaxPool2d(2)
         self.drop = nn.Dropout(0.15)
-        self.fc = nn.Linear(160, 5)
+        self.fc = nn.Linear(128, 5)
 
     def forward(self, x, qat=False):
-        x = self.b1(x, qat)
+        x = self.pool(self.b1(x, qat))
         x = self.pool(self.b2(x, qat))
         x = self.pool(self.b3(x, qat))
         x = self.pool(self.b4(x, qat))
@@ -94,13 +94,13 @@ class ColorV3Export(nn.Module):
                 c.bias.copy_(blk.bn.bias - blk.bn.running_mean * scale)
             self.convs.append(c)
         self.pool = nn.MaxPool2d(2)
-        self.fc = nn.Linear(160, 5)
+        self.fc = nn.Linear(128, 5)
         with torch.no_grad():
             self.fc.weight.copy_(src.fc.weight)
             self.fc.bias.copy_(src.fc.bias)
 
     def forward(self, x):
-        x = F.relu6(self.convs[0](x))
+        x = self.pool(F.relu6(self.convs[0](x)))
         x = self.pool(F.relu6(self.convs[1](x)))
         x = self.pool(F.relu6(self.convs[2](x)))
         x = self.pool(F.relu6(self.convs[3](x)))
@@ -192,20 +192,19 @@ def main():
     for k in ("train", "val", "holdout"):
         print(f"Split {k}: {len(data[k][0])} imgs")
 
-    # Class-balanced weights
+    # Class-balanced WeightedRandomSampler so minority classes (yellow) are sampled equally
     cnt = collections.Counter(data["train"][1])
-    max_c = max(cnt.values())
-    cw = torch.tensor([max_c / max(1, cnt[c]) for c in range(5)], dtype=torch.float32, device=device)
-    cw = cw / cw.mean()
+    sample_w = [1.0 / max(1, cnt[y]) for y in data["train"][1]]
+    sampler = WeightedRandomSampler(sample_w, num_samples=len(sample_w), replacement=True)
 
-    tr_loader = DataLoader(PlateColorDS(*data["train"], augment=True), batch_size=args.batch, shuffle=True, num_workers=2)
+    tr_loader = DataLoader(PlateColorDS(*data["train"], augment=True), batch_size=args.batch, sampler=sampler, num_workers=2)
     va_loader = DataLoader(PlateColorDS(*data["val"], augment=False), batch_size=args.batch, shuffle=False)
     ho_loader = DataLoader(PlateColorDS(*data["holdout"], augment=False), batch_size=args.batch, shuffle=False)
 
     model = ColorV3ReLU6().to(device)
-    opt = torch.optim.AdamW(model.parameters(), lr=2e-3, weight_decay=2e-4)
+    opt = torch.optim.AdamW(model.parameters(), lr=2.5e-3, weight_decay=2e-4)
     sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=args.epochs)
-    crit = nn.CrossEntropyLoss(weight=cw, label_smoothing=0.02)
+    crit = nn.CrossEntropyLoss(label_smoothing=0.02)
 
     best_va, best_state = -1.0, None
     t0 = time.time()
