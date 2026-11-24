@@ -14,7 +14,7 @@ if [ -z "$PLATE_MODEL" ]; then   # v2.4: npu1 默认用 U16 车牌检测模型�
   [ "$NPU" = "npu1" ] && [ -f models/plate_det_npu1_u16.axmodel ] && PLATE_MODEL=models/plate_det_npu1_u16.axmodel
 fi
 SNAP=${SNAP:-snaps}
-VER_STR=$(cat VERSION 2>/dev/null || echo v2.5-rc1)
+VER_STR=$(cat VERSION 2>/dev/null || echo v2.5)
 echo "[run.sh] plate_face_demo $VER_STR  NPU=$NPU PFD_VNPU=$PFD_VNPU plate=$PLATE_MODEL"
 [ -n "$COLOR5_MODEL" ] && EXTRA_ARGS="$EXTRA_ARGS --color5 $COLOR5_MODEL"
 # lib/ 下是随包的 FFmpeg 动态库（LGPL）；AX 运行时库(libax_engine 等)用板子系统自带的

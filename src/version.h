@@ -1,2 +1,2 @@
 #pragma once
-#define PFD_VERSION "v2.5-rc1"
+#define PFD_VERSION "v2.5"
