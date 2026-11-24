@@ -2,6 +2,8 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <limits>
+#include <map>
 #include <regex>
 #include <opencv2/imgproc.hpp>
 #include "timer.h"
@@ -149,6 +151,98 @@ cv::Mat PlateRecognizer::merge_double(const cv::Mat& img) {
     return m;
 }
 
+static float log_add_exp(float a, float b) {
+    const float neg_inf = -std::numeric_limits<float>::infinity();
+    if (a == neg_inf) return b;
+    if (b == neg_inf) return a;
+    float m = std::max(a, b);
+    return m + std::log(std::exp(a - m) + std::exp(b - m));
+}
+
+// v2.6: CTC Prefix Beam 解码（与锁定 decoder_core.py 口径一致：beam24 / top5，重复字符须经 blank）
+static std::pair<std::string, float> decode_ctc_prefix_beam(const float* data, int T, int C, int beam_w, int top_k) {
+    const float neg_inf = -std::numeric_limits<float>::infinity();
+    const float eps = 1e-12f;
+    struct BeamState { float pb = -std::numeric_limits<float>::infinity(); float pnb = -std::numeric_limits<float>::infinity(); };
+    std::map<std::vector<int>, BeamState> beams;
+    beams[{}] = {0.f, neg_inf};
+
+    std::vector<int> idx(C);
+    for (int t = 0; t < T; ++t) {
+        const float* p = data + (size_t)t * C;
+        // 兼容 logits 或已 softmax 概率：若和偏离 1 则做 softmax
+        float sum = 0.f, maxv = p[0];
+        for (int c = 0; c < C; ++c) { sum += p[c]; if (p[c] > maxv) maxv = p[c]; }
+        std::vector<float> lp(C);
+        if (std::abs(sum - 1.f) > 1e-2f || p[0] < 0.f) {
+            float esum = 0.f;
+            for (int c = 0; c < C; ++c) esum += std::exp(p[c] - maxv);
+            float lse = maxv + std::log(std::max(esum, eps));
+            for (int c = 0; c < C; ++c) lp[c] = p[c] - lse;
+        } else {
+            for (int c = 0; c < C; ++c) lp[c] = std::log(std::max(p[c], eps));
+        }
+
+        for (int c = 0; c < C; ++c) idx[c] = c;
+        int k = std::min(top_k, C);
+        std::partial_sort(idx.begin(), idx.begin() + k, idx.end(), [&](int a, int b) { return lp[a] > lp[b]; });
+        std::vector<int> cand(idx.begin(), idx.begin() + k);
+        if (std::find(cand.begin(), cand.end(), 0) == cand.end()) cand.push_back(0);
+
+        std::map<std::vector<int>, BeamState> next;
+        for (const auto& kv : beams) {
+            const auto& pref = kv.first;
+            float pb = kv.second.pb, pnb = kv.second.pnb;
+            float ptot = log_add_exp(pb, pnb);
+            for (int c : cand) {
+                float lpc = lp[c];
+                if (c == 0) {
+                    auto& st = next[pref];
+                    st.pb = log_add_exp(st.pb, ptot + lpc);
+                } else {
+                    if (!pref.empty() && pref.back() == c) {
+                        // 同字符延续（不经 blank）
+                        auto& st_same = next[pref];
+                        st_same.pnb = log_add_exp(st_same.pnb, pnb + lpc);
+                        // 经 blank 后重复字符
+                        std::vector<int> np = pref;
+                        np.push_back(c);
+                        auto& st_rep = next[np];
+                        st_rep.pnb = log_add_exp(st_rep.pnb, pb + lpc);
+                    } else {
+                        std::vector<int> np = pref;
+                        np.push_back(c);
+                        auto& st_new = next[np];
+                        st_new.pnb = log_add_exp(st_new.pnb, ptot + lpc);
+                    }
+                }
+            }
+        }
+        // 剪枝保留前 beam_w 条
+        std::vector<std::pair<float, std::vector<int>>> scored;
+        scored.reserve(next.size());
+        for (const auto& kv : next) scored.push_back({log_add_exp(kv.second.pb, kv.second.pnb), kv.first});
+        int keep = std::min((int)scored.size(), beam_w);
+        std::partial_sort(scored.begin(), scored.begin() + keep, scored.end(),
+                          [](const auto& a, const auto& b) { return a.first > b.first; });
+        beams.clear();
+        for (int i = 0; i < keep; ++i) beams[scored[i].second] = next[scored[i].second];
+    }
+
+    if (beams.empty()) return {"", 0.f};
+    std::vector<int> best_pref;
+    float best_score = neg_inf;
+    for (const auto& kv : beams) {
+        float sc = log_add_exp(kv.second.pb, kv.second.pnb);
+        if (sc > best_score) { best_score = sc; best_pref = kv.first; }
+    }
+    std::string s;
+    for (int c : best_pref) if (c > 0 && c < kNumTokens) s += kTokens[c];
+    // 置信度：按长度归一化的平均字符概率 exp(score / max(1, len))
+    float conf = best_pref.empty() ? 0.f : std::exp(best_score / (float)best_pref.size());
+    return {s, std::max(0.f, std::min(1.f, conf))};
+}
+
 std::pair<std::string, float> PlateRecognizer::run_rec(const cv::Mat& plate) {
     const int H = rec_->input_h(), W = rec_->input_w();
     // 等比缩放到高 H，宽不超过 W，右侧用 128（归一化后≈0）填充，与 HyperLPR3 训练时一致
@@ -162,6 +256,9 @@ std::pair<std::string, float> PlateRecognizer::run_rec(const cv::Mat& plate) {
     const Tensor& t = outs[0];  // [1, T, C]
     int T = t.shape.size() == 3 ? t.shape[1] : t.shape[t.shape.size() - 2];
     int C = t.shape.back();
+    if (cfg.prefix_beam) {
+        return decode_ctc_prefix_beam(t.data, T, C, cfg.prefix_beam_width, cfg.prefix_top_k);
+    }
     std::string s; float sum = 0; int n = 0, prev = -1;
     for (int i = 0; i < T; ++i) {
         const float* p = t.data + (size_t)i * C;

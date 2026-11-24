@@ -45,6 +45,7 @@ struct Args {
     bool layer_fallback = true;
     float layer_fallback_conf = 0.7f;
     bool dual_hyp = true; float dual_hyp_conf = 0.95f, dual_hyp_margin = 0.05f; bool dual_hyp_from_single = true;   // v2.4
+    bool rec_prefix_beam = true;   // v2.6: CTC Prefix Beam 解码
     // v2.2: ROI 放大二次检测（低分候选附近裁一块放大再检一次，救小/远/模糊车牌）
     int roi_max = 1;              // 每帧最多几个 ROI（0 关闭）
     float roi_seed_thr = 0.12f;   // 候选分数下限（上限为 plate_new_thr）
@@ -135,6 +136,7 @@ static bool parse_kv(const std::string& k0, const std::function<std::string()>& 
     else if (k == "dual_hyp_conf") F(a.dual_hyp_conf);
     else if (k == "dual_hyp_margin") F(a.dual_hyp_margin);
     else if (k == "dual_hyp_from_single") B(a.dual_hyp_from_single);
+    else if (k == "rec_prefix_beam") B(a.rec_prefix_beam);
     else if (k == "roi_max") I(a.roi_max);
     else if (k == "roi_seed_thr") F(a.roi_seed_thr);
     else if (k == "roi_min_w") F(a.roi_min_w);
@@ -483,6 +485,7 @@ int main(int argc, char** argv) {
             }
             plate_rec.cfg.expand_x = a.expand_x;
             plate_rec.cfg.expand_y = a.expand_y;
+            plate_rec.cfg.prefix_beam = a.rec_prefix_beam;
         }
 
         // ---------- video ----------
