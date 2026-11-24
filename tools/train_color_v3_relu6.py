@@ -57,14 +57,14 @@ class ConvBNReLU6(nn.Module):
 class ColorV3ReLU6(nn.Module):
     def __init__(self):
         super().__init__()
-        self.b1 = ConvBNReLU6(3, 24, stride=2)      # 96 -> 48
-        self.b2 = ConvBNReLU6(24, 48, stride=1)     # 48 -> pool 24
-        self.b3 = ConvBNReLU6(48, 96, stride=1)     # 24 -> pool 12
+        self.b1 = ConvBNReLU6(3, 32, stride=2)      # 96 -> 48
+        self.b2 = ConvBNReLU6(32, 64, stride=1)     # 48 -> pool 24
+        self.b3 = ConvBNReLU6(64, 96, stride=1)     # 24 -> pool 12
         self.b4 = ConvBNReLU6(96, 128, stride=1)    # 12 -> pool 6
-        self.b5 = ConvBNReLU6(128, 128, stride=1)   # 6 -> GAP 1
+        self.b5 = ConvBNReLU6(128, 160, stride=1)   # 6 -> GAP 1
         self.pool = nn.MaxPool2d(2)
         self.drop = nn.Dropout(0.15)
-        self.fc = nn.Linear(128, 5)
+        self.fc = nn.Linear(160, 5)
 
     def forward(self, x, qat=False):
         x = self.b1(x, qat)
@@ -94,7 +94,7 @@ class ColorV3Export(nn.Module):
                 c.bias.copy_(blk.bn.bias - blk.bn.running_mean * scale)
             self.convs.append(c)
         self.pool = nn.MaxPool2d(2)
-        self.fc = nn.Linear(128, 5)
+        self.fc = nn.Linear(160, 5)
         with torch.no_grad():
             self.fc.weight.copy_(src.fc.weight)
             self.fc.bias.copy_(src.fc.bias)
@@ -244,14 +244,17 @@ def main():
     print(f"\n=== INDEPENDENT HOLDOUT (QAT): {hc}/{ht} ({ha*100:.2f}%) ===")
     print("Per-class:", json.dumps(hd, ensure_ascii=False))
 
-    # Export BN-folded ONNX
+    # Save PyTorch checkpoint BEFORE ONNX export so training is never lost
+    torch.save(best_qstate, os.path.join(args.out_dir, "best_color_v3_qat.pt"))
+
+    # Export BN-folded ONNX (use legacy TorchScript exporter dynamo=False to avoid onnxscript dependency)
     exp_m = ColorV3Export(model.cpu().eval()).eval()
     onnx_p = os.path.join(args.out_dir, "plate_color_v3_relu6.onnx")
     dummy = torch.randn(1, 3, 96, 96)
     torch.onnx.export(
         exp_m, dummy, onnx_p,
         input_names=["data"], output_names=["output"],
-        opset_version=13, do_constant_folding=True
+        opset_version=13, do_constant_folding=True, dynamo=False
     )
     sha = hashlib.sha256(open(onnx_p, "rb").read()).hexdigest()
     print(f"Exported ONNX: {onnx_p} ({os.path.getsize(onnx_p):,} B) SHA256={sha}")
