@@ -1,5 +1,13 @@
 # Changelog
 
+## v2.5-rc1 (2026-11-24，待板端 NPU/完整视频验收)
+- **微调识别器 U16 量化上线（npu1 / npu2）**：基于已接受混合微调 ONNX `plate_rec_finetune.onnx`（SHA256 `45b005b5…`），在 Pulsar2 8.0（AX620E，`calib_rec.tar`，整网 U16 激活，`compiler.check=1` PASS）编译出 `plate_rec_npu1.axmodel`（SHA256 `431db6dd…`，EndToEnd Cosine `0.99932`）与 `plate_rec_npu2.axmodel`（SHA256 `c6079622…`）。10 例冻结 `val600` 使馆特种牌仿真 CTC 文本 10/10 与浮点及 GT 全一致。
+- **特种车牌格式规则（R46）**：集成 GA36-2018 结构语法支持（使/领/警/学/挂/港/澳）。
+- **颜色分类头与安全边界（R40 + `2241e28`）**：
+  - 默认继续使用生产已验证的 3 类颜色模型（`plate_cls_npu1.axmodel` / `npu2.axmodel`），并加入旧三类 `outs[0].size() == 3` 严格防误接保护。
+  - 保留独立可选 `--color5` 展示头入口（默认关闭；可通过 `COLOR5_MODEL=... ./run.sh` 显式启用）。v2 五类颜色 CNN（`ecba573c…`）在 AX620E 上已实证 `U16×S16` 溢出且 `U16×S8` 未过原 CAL64 门禁，五类颜色默认化移至 v2.6（改用 ReLU6 量化友好结构重训）。
+- **回退安全**：独立非生产测试包（建议部署于 `/opt/demo_v25_rc`，不改动生产 `/opt/demo_v24`）。
+
 ## 未改板端版本：混合数据微调 ONNX（2026-11-07）
 
 `plate_face_demo` 仍是 v2.4。微调识别器和五色颜色网络在 `models/onnx/`，推理脚本是 `scripts/infer_plate.py`。二者成对替换 v2.4 的识别器 + 颜色网络，不在旧识别器和新识别器之间分流。尚未量化，没有 axmodel。C++ 颜色头仍按 3 类（蓝/绿/黄）读取，不能把 `plate_color_finetune.onnx` 直接传给现在的 `--color`。

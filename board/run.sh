@@ -14,7 +14,9 @@ if [ -z "$PLATE_MODEL" ]; then   # v2.4: npu1 默认用 U16 车牌检测模型�
   [ "$NPU" = "npu1" ] && [ -f models/plate_det_npu1_u16.axmodel ] && PLATE_MODEL=models/plate_det_npu1_u16.axmodel
 fi
 SNAP=${SNAP:-snaps}
-echo "[run.sh] plate_face_demo v2.4  NPU=$NPU PFD_VNPU=$PFD_VNPU plate=$PLATE_MODEL"
+VER_STR=$(cat VERSION 2>/dev/null || echo v2.5-rc1)
+echo "[run.sh] plate_face_demo $VER_STR  NPU=$NPU PFD_VNPU=$PFD_VNPU plate=$PLATE_MODEL"
+[ -n "$COLOR5_MODEL" ] && EXTRA_ARGS="$EXTRA_ARGS --color5 $COLOR5_MODEL"
 # lib/ 下是随包的 FFmpeg 动态库（LGPL）；AX 运行时库(libax_engine 等)用板子系统自带的
 export LD_LIBRARY_PATH=/usr/local/lib:$PWD/lib:/soc/lib:/opt/lib:/usr/lib:${LD_LIBRARY_PATH}
 # 板子系统里找不到 libax_engine.so 时，才退回随包的 SDK 库（V2.0.0_P7，可能与板子驱动版本不匹配）

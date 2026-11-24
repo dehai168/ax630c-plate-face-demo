@@ -29,8 +29,9 @@ echo "$VER" > "$STAGE/VERSION"
 tar -C "$(dirname "$STAGE")" -czf "$OUTDIR/${NAME}_${VER}_board.tar.gz" "$(basename "$STAGE")"
 echo "board package: $OUTDIR/${NAME}_${VER}_board.tar.gz"
 # 源码包（不含 build/ 3rdparty/ 大文件结果视频）
+ROOT_BASE=$(basename "$ROOT")
 tar -C "$(dirname "$ROOT")" -czf "$OUTDIR/${NAME}_${VER}_src.tar.gz" \
-  --exclude="$NAME/build" --exclude="$NAME/3rdparty" --exclude="$NAME/results/*/*.mp4" --exclude="$NAME/results/*/snaps" \
-  --exclude="__pycache__" "$NAME"
+  --exclude="$ROOT_BASE/build" --exclude="$ROOT_BASE/3rdparty" --exclude="$ROOT_BASE/results/*/*.mp4" --exclude="$ROOT_BASE/results/*/snaps" \
+  --exclude="__pycache__" "$ROOT_BASE"
 echo "source package: $OUTDIR/${NAME}_${VER}_src.tar.gz"
 (cd "$OUTDIR" && sha256sum ${NAME}_${VER}_board.tar.gz ${NAME}_${VER}_src.tar.gz > ${NAME}_${VER}_SHA256SUMS.txt)
