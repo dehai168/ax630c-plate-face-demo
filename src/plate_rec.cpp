@@ -395,9 +395,19 @@ PlateRecResult PlateRecognizer::recognize(const cv::Mat& frame, const std::vecto
         int c2 = resolve_plate_color(s, r.color, r.cls_color, cfg);
         if (c2 == PC_YELLOWGREEN) { r.color = PC_YELLOWGREEN; r.color_conf = 0.9f; r.color_src = "rule"; }
     }
-    // AFTER legacy selection and confidence/rules: no hypothesis or text weight dependency on this head.
-    r.color5_enabled=bool(cls5_);
-    if(r.color5_enabled){r.raw5=classify_color5(r.rectified);r.display_color5=resolve_plate_color5(r.text,r.raw5.color,r.raw5.color,r.layer,cfg);}
+    // v2.6: ColorV3-ReLU6 5-class head drives final display/JSON color when loaded (legacy 3-class stays selection/layer authority)
+    r.color5_enabled = bool(cls5_);
+    if (r.color5_enabled) {
+        const char* src5 = "color5";
+        r.raw5 = classify_color5(r.rectified);
+        r.display_color5 = resolve_plate_color5(r.text, r.raw5.color, r.raw5.color, r.layer, cfg, &src5);
+        if (r.display_color5 != PC_UNKNOWN) {
+            r.color = r.display_color5;
+            r.cls_color = r.raw5.color;
+            r.color_conf = r.raw5.conf;
+            r.color_src = src5;
+        }
+    }
     tcls += tc2.lap();
     (void)tm;
     if (t_rec) *t_rec = trec;
