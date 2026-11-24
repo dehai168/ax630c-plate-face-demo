@@ -1,5 +1,17 @@
 # Changelog
 
+## v2.6 (2026-11-24，五类颜色 `ColorV3-ReLU6` 默认上线 + C++ Prefix Beam 解码，AX630C 实板验收通过)
+- **五类颜色 `ColorV3-ReLU6` 默认上线（`plate_color5_npu1.axmodel` / `npu2.axmodel`）**：
+  - 全新轻量 5 层 CNN（全网 `ReLU6` 封顶 `[0, 6]`，彻底消除激活离群值），统一训练与 C++ 线上预处理为 `raw_rectified -> 96×96`（永久闭合 C-IF-004 双层拼接分歧）。
+  - 基于标注平台 `cn_plate_special`（5,010 图）+ `cn_plate_val_su`（300 图）导出的 5,266 张真实车牌（`train` 4,217 / `val` 524 / 独立 `holdout` 525）+ BN 折叠 S8 QAT 训练。
+  - **Pulsar2 8.0 `U16+S8` 量化门禁一次性通过**（64 例独立 holdout 实测）：`Max = 0.01534`（≤ 0.030）、`MAE = 0.000690`（≤ 0.005）、`argmax` 一致率 **`64/64`（100%）**、`compiler.check=1` PASS；模型仅 328 KB（`npu1` SHA256 `b7088a3e…`，`npu2` SHA256 `9c3e90c5…`）。
+  - 独立 525 张真实 holdout 纯网络五类：白 `97.8%`（136/139）、黑 `94.9%`（94/99）、绿 `92.4%`、蓝 `92.1%`、黄 `83.6%`（总体 `93.52%`）；修复 `color5_crop_policy.inc` 不再将白/黑牌误压回蓝/黄，`board/run.sh` 默认启用 `--color5`（可通过 `COLOR5_MODEL=none` 回退旧三类）。
+- **C++ CTC Prefix Beam 解码上线**（`src/plate_rec.cpp`、`board/demo.cfg` 新增 `rec_prefix_beam 1`）：
+  - 与锁定 `decoder_core.py`（`beam24` / `top5` / 重复字符须经 blank）同口径，不增加任何 NPU 推理次数。
+- **AX630C 实板验收（2026-11-24，`/opt/demo_v26_rc`，生产 `/opt/demo_v24` 未改动）**：
+  - 全部 5 模型（`face_det` + `plate_det_u16` + `plate_rec_v25_u16` + `plate_cls` + `plate_color5_v26`）在物理 NPU1（`PFD_VNPU=1`）稳定加载运行。
+  - 完整 720 帧真实视频（`test_video.mp4`，1280×720 @ 15fps，48s）：`VIDEO_EXIT=0`，无崩溃/无 OOM（剩余可用内存 113 MB，ext4 `errors_count` 零新增），10/10 车牌（JSON 实证 `"color_src": "color5"`）+ 59 人脸轨迹正常输出，平均算法 FPS **`10.73`**（`plate_rec` 6.09 ms/帧、`plate_color` 0.67 ms/帧），端到端 FPS **`4.95`**。
+
 ## v2.5 (2026-11-24，AX630C 实板 NPU1 + 完整视频验收通过)
 - **微调识别器 U16 量化上线（npu1 / npu2）**：基于已接受混合微调 ONNX `plate_rec_finetune.onnx`（SHA256 `45b005b5…`），在 Pulsar2 8.0（AX620E，`calib_rec.tar`，整网 U16 激活，`compiler.check=1` PASS）编译出 `plate_rec_npu1.axmodel`（SHA256 `431db6dd…`，EndToEnd Cosine `0.99932`）与 `plate_rec_npu2.axmodel`（SHA256 `c6079622…`）。10 例冻结 `val600` 使馆特种牌仿真 CTC 文本 10/10 与浮点及 GT 全一致。
 - **特种车牌格式规则（R46）**：集成 GA36-2018 结构语法支持（使/领/警/学/挂/港/澳）。

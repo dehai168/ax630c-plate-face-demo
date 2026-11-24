@@ -14,7 +14,7 @@ if [ -z "$PLATE_MODEL" ]; then   # v2.4: npu1 默认用 U16 车牌检测模型�
   [ "$NPU" = "npu1" ] && [ -f models/plate_det_npu1_u16.axmodel ] && PLATE_MODEL=models/plate_det_npu1_u16.axmodel
 fi
 SNAP=${SNAP:-snaps}
-VER_STR=$(cat VERSION 2>/dev/null || echo v2.6-rc1)
+VER_STR=$(cat VERSION 2>/dev/null || echo v2.6)
 if [ -z "$COLOR5_MODEL" ] && [ -f "models/plate_color5_${NPU}.axmodel" ]; then
   COLOR5_MODEL="models/plate_color5_${NPU}.axmodel"
 fi
