@@ -198,13 +198,14 @@ def main():
         # Synth images are already 160x48 (with double already merged)
         train_samples.append({"abs_path": p, "text": txt, "ids": ids, "is_double": False, "src": "synth"})
 
-    # Compute province-balanced sampling weights (real gets 2x boost over synth)
+    # Compute province-balanced sampling weights (real gets 4x boost over synth, cap oversampling)
     prov_counts = Counter(s["text"][0] for s in train_samples)
     weights = []
     for s in train_samples:
-        w = 1.0 / max(1, prov_counts[s["text"][0]])
+        c = prov_counts[s["text"][0]]
+        w = 1.0 / min(max(1, c), 300)
         if s["src"] == "real":
-            w *= 2.0
+            w *= 4.0
         weights.append(w)
 
     print(f"Train={len(train_samples)} (provinces={len(prov_counts)}), Val/Holdout={len(val_samples)}", flush=True)
@@ -218,32 +219,45 @@ def main():
     dyn_onnx = os.path.join(os.path.dirname(args.out_onnx), "_dyn_base.onnx")
     make_dynamic_batch_onnx(args.base_onnx, dyn_onnx)
     model = convert(dyn_onnx).to(device)
-    # Check output shape on dummy
     with torch.no_grad():
         dummy = torch.zeros(1, 3, 48, 160, device=device)
         out_d = model(dummy)
         print("Model output shape:", tuple(out_d.shape), flush=True)
 
     ctc = nn.CTCLoss(blank=0, zero_infinity=True)
-    opt = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=1e-4)
+    params = list(model.named_parameters())
+    n_tot = len(params)
+    head_params = [p for i, (_, p) in enumerate(params) if i >= int(n_tot * 0.7)]
+    body_params = [p for i, (_, p) in enumerate(params) if i < int(n_tot * 0.7)]
+    opt = torch.optim.AdamW([
+        {"params": body_params, "lr": args.lr * 0.25},
+        {"params": head_params, "lr": args.lr * 2.0},
+    ], weight_decay=1e-4)
     sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=args.epochs)
 
     def eval_val(tag):
         model.eval()
-        ok = n = 0
+        ok = n = ok_nj = n_nj = 0
         with torch.no_grad():
             for xs, _, _, txts in va_dl:
                 out = model(xs.to(device)).cpu().numpy()
                 for i, gt in enumerate(txts):
                     pred = greedy_decode(out[i])
-                    ok += int(pred == gt)
+                    hit = int(pred == gt)
+                    ok += hit
                     n += 1
+                    if gt[0] != "京":
+                        ok_nj += hit
+                        n_nj += 1
         acc = ok / max(1, n)
-        print(f"{tag} val_exact={ok}/{n} ({acc*100:.2f}%)", flush=True)
-        return acc
+        acc_nj = ok_nj / max(1, n_nj)
+        print(f"{tag} val_exact={ok}/{n} ({acc*100:.2f}%) | non_jing={ok_nj}/{n_nj} ({acc_nj*100:.2f}%)", flush=True)
+        return acc, acc_nj
 
-    best_acc = eval_val("Epoch 00 (base)")
-    best_state = {k: v.cpu().clone() for k, v in model.state_dict().items()}
+    base_acc, base_nj = eval_val("Epoch 00 (base)")
+    best_score = -1.0
+    best_acc = base_acc
+    best_state = None
     for ep in range(1, args.epochs + 1):
         model.train()
         tot_loss = 0.0
@@ -264,8 +278,10 @@ def main():
             tot_loss += loss.item()
         sched.step()
 
-        acc = eval_val(f"Epoch {ep:02d}/{args.epochs} loss={tot_loss/len(tr_dl):.4f}")
-        if acc >= best_acc:
+        acc, acc_nj = eval_val(f"Epoch {ep:02d}/{args.epochs} loss={tot_loss/len(tr_dl):.4f}")
+        score = 0.4 * acc + 0.6 * acc_nj
+        if score >= best_score:
+            best_score = score
             best_acc = acc
             best_state = {k: v.cpu().clone() for k, v in model.state_dict().items()}
 
