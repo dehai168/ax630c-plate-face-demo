@@ -32,7 +32,7 @@ static const std::vector<float> kAnchors = {4, 5, 8, 10, 13, 16, 23, 29, 43, 55,
 
 // ------------------------------------------------------------------ args
 struct Args {
-    std::string in, out, face, plate, rec, color, color5, snap_dir, dump, osd_mask, result_json;
+    std::string in, out, face, plate, rec, color, color5, snap_dir, dump, osd_mask, result_json, image_list, out_dir;
     // 检测/跟踪阈值（v2 默认值；--legacy 恢复 v1 行为）
     float face_thr = 0.45f, face_new_thr = 0.5f, plate_thr = 0.35f, plate_new_thr = 0.45f, nms = 0.45f;
     float plate_buffer = 0.4f, face_buffer = 0.3f;
@@ -111,6 +111,8 @@ static bool parse_kv(const std::string& k0, const std::function<std::string()>& 
     else if (k == "snap_dir") a.snap_dir = next();
     else if (k == "dump") a.dump = next();
     else if (k == "result_json") a.result_json = next();
+    else if (k == "image_list") a.image_list = next();
+    else if (k == "out_dir") a.out_dir = next();
     else if (k == "osd_mask") a.osd_mask = next();
     else if (k == "face_thr") F(a.face_thr);
     else if (k == "face_new_thr") F(a.face_new_thr);
@@ -204,7 +206,7 @@ static bool parse(int argc, char** argv, Args& a) {
         if (k == "--config") { if (!load_config(next(), a)) return false; continue; }
         if (!parse_kv(k, next, a)) { fprintf(stderr, "unknown arg %s\n", k.c_str()); usage(argv[0]); return false; }
     }
-    if (a.in.empty() || a.out.empty() || (a.face.empty() && a.plate.empty())) { usage(argv[0]); return false; }
+    if ((a.image_list.empty() && (a.in.empty() || a.out.empty())) || (a.face.empty() && a.plate.empty())) { usage(argv[0]); return false; }
     if (!a.plate.empty() && a.rec.empty()) { fprintf(stderr, "--plate 需要同时给 --rec\n"); return false; }
     return true;
 }
@@ -486,6 +488,122 @@ int main(int argc, char** argv) {
             plate_rec.cfg.expand_x = a.expand_x;
             plate_rec.cfg.expand_y = a.expand_y;
             plate_rec.cfg.prefix_beam = a.rec_prefix_beam;
+        }
+
+        // ---------- image_list mode (v2.7: native-resolution batch image eval) ----------
+        if (!a.image_list.empty()) {
+            std::ifstream il(a.image_list);
+            if (!il) { fprintf(stderr, "cannot open image_list: %s\n", a.image_list.c_str()); return 4; }
+            if (!a.out_dir.empty()) mkdir_p(a.out_dir);
+            PlateGeomConfig pgeo;
+            FaceGeomConfig fgeo; fgeo.min_size = a.face_min_size; fgeo.eye_dist_min = a.face_eye_min;
+            std::ofstream js;
+            if (!a.result_json.empty()) { js.open(a.result_json); js << "{\n  \"images\": [\n"; }
+            std::string path;
+            int idx = 0, det_plates_total = 0;
+            Timer wall;
+            while (std::getline(il, path)) {
+                while (!path.empty() && (path.back() == '\r' || path.back() == '\n' || path.back() == ' ')) path.pop_back();
+                if (path.empty()) continue;
+                cv::Mat frame = cv::imread(path);
+                int W = frame.cols, H = frame.rows;
+                std::vector<Detection> fd, pd;
+                struct ImgPlate { Detection det; PlateRecResult rec; bool fmt = false; };
+                std::vector<ImgPlate> ip;
+                if (!frame.empty()) {
+                    if (face_det) {
+                        auto raw = face_det->detect(frame, a.face_thr, a.nms);
+                        for (auto& d : raw) {
+                            if (a.face_geom && face_geometry_score(d, fgeo) < 0) continue;
+                            if (a.face_skin > 0 && face_skin_ratio(frame, d.box) < a.face_skin) continue;
+                            fd.push_back(d);
+                        }
+                    }
+                    if (plate_det) {
+                        auto raw = plate_det->detect(frame, 0.1f, a.nms);
+                        if (a.roi_max > 0 && a.roi_zoom > 1.f) {
+                            std::vector<const Detection*> seeds;
+                            for (auto& d : raw) {
+                                if (d.score < a.roi_seed_thr || d.score >= a.plate_new_thr || d.box.width < a.roi_min_w) continue;
+                                bool covered = false;
+                                for (auto& h : raw) if (h.score >= a.plate_new_thr && iou(h.box, d.box) > 0.3f) { covered = true; break; }
+                                if (!covered) seeds.push_back(&d);
+                            }
+                            std::sort(seeds.begin(), seeds.end(), [](const Detection* x, const Detection* y) { return x->score > y->score; });
+                            int rw = std::min(W, (int)std::round(W / a.roi_zoom)), rh = std::min(H, (int)std::round(H / a.roi_zoom));
+                            std::vector<cv::Rect> rois;
+                            for (auto* sd : seeds) {
+                                if ((int)rois.size() >= a.roi_max) break;
+                                cv::Point2f c(sd->box.x + sd->box.width / 2, sd->box.y + sd->box.height / 2);
+                                int x0 = std::max(0, std::min(W - rw, (int)std::round(c.x - rw / 2.f)));
+                                int y0 = std::max(0, std::min(H - rh, (int)std::round(c.y - rh / 2.f)));
+                                rois.emplace_back(x0, y0, rw, rh);
+                            }
+                            for (auto& r : rois) {
+                                auto rd = plate_det->detect(frame(r), 0.1f, a.nms);
+                                const float m = 3.f;
+                                for (auto& d : rd) {
+                                    if ((d.box.x < m && r.x > 0) || (d.box.y < m && r.y > 0) ||
+                                        (d.box.x + d.box.width > r.width - m && r.x + r.width < W) || (d.box.y + d.box.height > r.height - m && r.y + r.height < H)) continue;
+                                    d.box.x += r.x; d.box.y += r.y;
+                                    for (auto& k : d.kps) { k.x += r.x; k.y += r.y; }
+                                    raw.push_back(d);
+                                }
+                            }
+                            if (!rois.empty()) nms(raw, a.nms);
+                        }
+                        for (auto& d : raw) {
+                            if (d.score < a.plate_thr) continue;
+                            if (a.plate_geom && !plate_geometry_ok(d, pgeo)) continue;
+                            pd.push_back(d);
+                        }
+                        for (auto& d : pd) {
+                            ImgPlate item; item.det = d;
+                            if (!a.rec.empty()) {
+                                item.rec = plate_rec.recognize(frame, d.kps, d.cls);
+                                item.fmt = a.strict_format ? strict_plate_format(item.rec.text, a.max_serial_letters) : item.rec.valid_format;
+                            }
+                            ip.push_back(std::move(item));
+                        }
+                    }
+                    det_plates_total += (int)ip.size();
+                    if (!a.out_dir.empty()) {
+                        for (size_t k = 0; k < fd.size(); ++k) {
+                            cv::rectangle(frame, fd[k].box, cv::Scalar(0, 220, 0), 2);
+                        }
+                        for (size_t k = 0; k < ip.size(); ++k) {
+                            auto& item = ip[k];
+                            cv::rectangle(frame, item.det.box, cv::Scalar(255, 160, 0), 2);
+                            for (size_t j = 0; j < item.det.kps.size(); ++j)
+                                cv::line(frame, item.det.kps[j], item.det.kps[(j + 1) % 4], cv::Scalar(0, 255, 255), 2);
+                            std::string lbl = item.rec.text + " " + plate_color_cn(item.rec.color) + (item.rec.layer ? "(双)" : "");
+                            put_text(frame, lbl, cv::Point((int)item.det.box.x, std::max(28, (int)item.det.box.y)), 22, cv::Scalar(200, 100, 0));
+                        }
+                        size_t slash = path.find_last_of("/\\");
+                        std::string bn = slash == std::string::npos ? path : path.substr(slash + 1);
+                        size_t dot = bn.find_last_of('.');
+                        std::string stem = dot == std::string::npos ? bn : bn.substr(0, dot);
+                        cv::imwrite(a.out_dir + "/" + stem + "_out.jpg", frame);
+                    }
+                }
+                if (js.is_open()) {
+                    if (idx > 0) js << ",\n";
+                    js << "    {\"idx\": " << idx << ", \"file\": \"" << json_escape(path) << "\", \"w\": " << W << ", \"h\": " << H << ", \"faces\": " << fd.size() << ", \"plates\": [";
+                    for (size_t k = 0; k < ip.size(); ++k) {
+                        auto& it = ip[k];
+                        js << (k ? ", " : "") << "{\"plate\": \"" << json_escape(it.rec.text) << "\", \"color\": \"" << plate_color_cn(it.rec.color)
+                           << "\", \"color_src\": \"" << it.rec.color_src << "\", \"layer\": \"" << (it.rec.layer ? "double" : "single")
+                           << "\", \"det_layer\": \"" << (it.rec.det_layer ? "double" : "single") << "\", \"override\": " << (it.rec.layer_overridden ? 1 : 0)
+                           << ", \"conf\": " << it.rec.conf << ", \"score\": " << it.det.score << ", \"fmt\": " << (it.fmt ? 1 : 0) << "}";
+                    }
+                    js << "]}";
+                }
+                ++idx;
+            }
+            if (js.is_open()) js << "\n  ]\n}\n";
+            printf("image_list done: %d images, %d plates, wall %.1f s\n", idx, det_plates_total, wall.total() / 1000.0);
+            backend_global_deinit();
+            return 0;
         }
 
         // ---------- video ----------

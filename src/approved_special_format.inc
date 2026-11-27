@@ -20,7 +20,8 @@ static int approved_special_syntax(const std::vector<std::string>& c, int max_le
         return digit(c[5])||(max_letters>=1 && letter(c[5]));
     }
     if(c[6]!="警" && c[6]!="学" && c[6]!="挂" && c[6]!="港" && c[6]!="澳") return 0;
-    if(!province(c[0]) || !letter(c[1])) return 0;
+    if(!province(c[0])) return 0;
+    if(!(letter(c[1]) || (c[6]=="警" && digit(c[1])))) return 0;
     if((c[6]=="港"||c[6]=="澳") && (c[0]!="粤"||c[1]!="Z")) return 0;
     int letters=0;
     for(int i=2;i<=5;++i) { if(letter(c[i])) ++letters; else if(!digit(c[i])) return 0; }

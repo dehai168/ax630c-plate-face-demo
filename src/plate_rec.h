@@ -57,10 +57,10 @@ struct PlateRecConfig {
     float dual_hyp_conf = 0.95f;     // 当前假设的结果已“严格合法且置信度 >= 此值”则不再试另一种（省一次推理）
     float dual_hyp_margin = 0.05f;   // 两种假设都合法时，另一假设置信度须高出此值才取代当前
     bool dual_hyp_from_single = true;// 检测器判单层、结果不合法、拉正图分类为允许双层的颜色 -> 也试双层
-    // v2.6: CTC Prefix Beam 解码（不增加 NPU 推理次数，提升重复字符与特种牌整牌精度）
+    // v2.6/v2.7: CTC Prefix Beam 解码（不增加 NPU 推理次数，提升重复字符与特种牌整牌精度）
     bool prefix_beam = true;
     int prefix_beam_width = 24;
-    int prefix_top_k = 5;
+    int prefix_top_k = 6;
 };
 
 class PlateRecognizer {

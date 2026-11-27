@@ -94,7 +94,10 @@ bool PlateRecognizer::check_format(const std::string& s) {
     if (ch[0].size() != 3 || prov.find(ch[0]) == std::string::npos) {
         if (!(ch[0] == "W" && ch[1] == "J")) return false;
     }
-    if (ch[1].size() != 1 || !(ch[1][0] >= 'A' && ch[1][0] <= 'Z')) return false;
+    if (ch[1].size() != 1) return false;
+    bool ch1_letter = (ch[1][0] >= 'A' && ch[1][0] <= 'Z');
+    bool ch1_police_digit = (ch.size() == 7 && ch[6] == "警" && ch[1][0] >= '0' && ch[1][0] <= '9');
+    if (!ch1_letter && !ch1_police_digit) return false;
     return true;
 }
 
@@ -230,16 +233,47 @@ static std::pair<std::string, float> decode_ctc_prefix_beam(const float* data, i
     }
 
     if (beams.empty()) return {"", 0.f};
+    auto is_digit_tok = [](int idx) { return idx >= 2 && idx <= 11; }; // "0".."9"
+    auto is_large_ne_end_tok = [](int idx) {
+        if (idx <= 0 || idx >= kNumTokens) return false;
+        const char* tok = kTokens[idx];
+        return tok[0] != '\0' && tok[1] == '\0' && std::string("ABCDEFGHJK").find(tok[0]) != std::string::npos;
+    };
+    auto is_valid_first_tok = [](int idx) {
+        if (idx <= 0 || idx >= kNumTokens) return false;
+        const char* tok = kTokens[idx];
+        // 首字符不能是数字(2..11)、单引号(1)、或后缀汉字(学41/挂44/港53/警63/领74/澳76)
+        if (idx == 1 || (idx >= 2 && idx <= 11)) return false;
+        if (idx == 41 || idx == 44 || idx == 53 || idx == 63 || idx == 74 || idx == 76) return false;
+        // 若是汉字(多字节)或 'W' / '使'(75) 则允许
+        if ((unsigned char)tok[0] >= 0x80) return true;
+        return tok[0] == 'W';
+    };
+    auto is_prov_tok = [](int idx) {
+        if (idx <= 0 || idx >= kNumTokens) return false;
+        if (idx == 41 || idx == 44 || idx == 53 || idx == 63 || idx == 74 || idx == 75 || idx == 76) return false;
+        return (unsigned char)kTokens[idx][0] >= 0x80;
+    };
     std::vector<int> best_pref;
     float best_score = neg_inf;
+    float best_raw_score = neg_inf;
     for (const auto& kv : beams) {
-        float sc = log_add_exp(kv.second.pb, kv.second.pnb);
-        if (sc > best_score) { best_score = sc; best_pref = kv.first; }
+        float raw = log_add_exp(kv.second.pb, kv.second.pnb);
+        float sc = raw;
+        const auto& pf = kv.first;
+        // v2.7: 首字符合法性 + 7/8位长度先验 + 禁止双省份汉字 + 8位大型新能源末位约束
+        if (!pf.empty() && !is_valid_first_tok(pf[0])) sc -= 6.0f;
+        if (pf.size() < 7 || pf.size() > 8) sc -= 4.0f;
+        if (pf.size() >= 2 && is_prov_tok(pf[0]) && is_prov_tok(pf[1])) sc -= 6.0f;
+        if (pf.size() == 8 && is_digit_tok(pf[2]) && !is_large_ne_end_tok(pf[7])) {
+            sc -= 5.0f;
+        }
+        if (sc > best_score) { best_score = sc; best_raw_score = raw; best_pref = pf; }
     }
     std::string s;
     for (int c : best_pref) if (c > 0 && c < kNumTokens) s += kTokens[c];
-    // 置信度：按长度归一化的平均字符概率 exp(score / max(1, len))
-    float conf = best_pref.empty() ? 0.f : std::exp(best_score / (float)best_pref.size());
+    // 置信度：按长度归一化的平均字符概率 exp(raw_score / max(1, len))
+    float conf = best_pref.empty() ? 0.f : std::exp(best_raw_score / (float)best_pref.size());
     return {s, std::max(0.f, std::min(1.f, conf))};
 }
 
@@ -346,7 +380,10 @@ PlateRecResult PlateRecognizer::recognize(const cv::Mat& frame, const std::vecto
         auto fmt_score = [&](const std::string& t) { return strict_plate_format(t, cfg.max_serial_letters) ? 2 : (check_format(t) ? 1 : 0); };
         auto is_dbl_color = [&](int c) { return std::find(cfg.double_colors.begin(), cfg.double_colors.end(), c) != cfg.double_colors.end(); };
         int cur_fs = fmt_score(r.text);
-        bool confident = cur_fs == 2 && r.conf >= cfg.dual_hyp_conf;
+        float rect_ar = (float)r.rectified.cols / std::max(1, r.rectified.rows);
+        // v2.7: 检测器判双层且外框呈双层方牌比例(ar<2.4)、双层识别已合法时，不翻回单层
+        bool lock_double = (layer == 1 && r.layer == 1 && cur_fs >= 1 && rect_ar < 2.4f);
+        bool confident = (cur_fs == 2 && r.conf >= cfg.dual_hyp_conf) || lock_double;
         if (!confident) {
             int other = -1;
             if (r.layer == 1) other = 0;                       // 当前双层 -> 试单层（任何颜色都允许单层）
