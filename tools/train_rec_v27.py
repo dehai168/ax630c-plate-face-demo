@@ -56,16 +56,29 @@ def greedy_decode(logits):
 
 
 def prep_160x48(bgr, is_double=False):
-    if is_double:
-        h, w = bgr.shape[:2]
-        up = bgr[0 : max(1, h * 5 // 12), :]
-        down = bgr[h // 3 :, :]
-        up = cv2.resize(up, (down.shape[1], down.shape[0]))
-        bgr = cv2.hconcat([up, down])
     h, w = bgr.shape[:2]
     if (h, w) == (48, 160):
         canvas = bgr
+    elif (h, w) == (96, 96):
+        # v26_color5_pack.tar crops were saved at 96x96; restore plate aspect ratio before 160x48
+        if is_double:
+            bgr_rect = cv2.resize(bgr, (110, 55))
+            up = bgr_rect[0 : max(1, 55 * 5 // 12), :]
+            down = bgr_rect[55 // 3 :, :]
+            up = cv2.resize(up, (down.shape[1], down.shape[0]))
+            bgr = cv2.hconcat([up, down])
+            rw = min(160, max(1, int(np.ceil(48 * (bgr.shape[1] / bgr.shape[0])))))
+            canvas = np.full((48, 160, 3), 128, dtype=np.uint8)
+            canvas[:, :rw] = cv2.resize(bgr, (rw, 48))
+        else:
+            canvas = cv2.resize(bgr, (160, 48))
     else:
+        if is_double:
+            up = bgr[0 : max(1, h * 5 // 12), :]
+            down = bgr[h // 3 :, :]
+            up = cv2.resize(up, (down.shape[1], down.shape[0]))
+            bgr = cv2.hconcat([up, down])
+            h, w = bgr.shape[:2]
         rw = min(160, max(1, int(np.ceil(48 * (w / max(1, h))))))
         canvas = np.full((48, 160, 3), 128, dtype=np.uint8)
         canvas[:, :rw] = cv2.resize(bgr, (rw, 48))
@@ -215,15 +228,28 @@ def main():
     opt = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=1e-4)
     sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=args.epochs)
 
-    best_acc = -1.0
-    best_state = None
+    def eval_val(tag):
+        model.eval()
+        ok = n = 0
+        with torch.no_grad():
+            for xs, _, _, txts in va_dl:
+                out = model(xs.to(device)).cpu().numpy()
+                for i, gt in enumerate(txts):
+                    pred = greedy_decode(out[i])
+                    ok += int(pred == gt)
+                    n += 1
+        acc = ok / max(1, n)
+        print(f"{tag} val_exact={ok}/{n} ({acc*100:.2f}%)", flush=True)
+        return acc
+
+    best_acc = eval_val("Epoch 00 (base)")
+    best_state = {k: v.cpu().clone() for k, v in model.state_dict().items()}
     for ep in range(1, args.epochs + 1):
         model.train()
         tot_loss = 0.0
         for xs, targets, lens, _ in tr_dl:
             xs, targets, lens = xs.to(device), targets.to(device), lens.to(device)
             logits = model(xs)  # [B, T, C]
-            # If model already outputs softmax probs, convert safely to log_probs
             if logits.min() >= 0.0 and torch.allclose(logits.sum(dim=-1), torch.ones_like(logits[..., 0]), atol=1e-2):
                 log_p = torch.log(logits.clamp(min=1e-7))
             else:
@@ -238,17 +264,7 @@ def main():
             tot_loss += loss.item()
         sched.step()
 
-        model.eval()
-        ok = n = 0
-        with torch.no_grad():
-            for xs, _, _, txts in va_dl:
-                out = model(xs.to(device)).cpu().numpy()
-                for i, gt in enumerate(txts):
-                    pred = greedy_decode(out[i])
-                    ok += int(pred == gt)
-                    n += 1
-        acc = ok / max(1, n)
-        print(f"Epoch {ep:02d}/{args.epochs} loss={tot_loss/len(tr_dl):.4f} val_exact={ok}/{n} ({acc*100:.2f}%)", flush=True)
+        acc = eval_val(f"Epoch {ep:02d}/{args.epochs} loss={tot_loss/len(tr_dl):.4f}")
         if acc >= best_acc:
             best_acc = acc
             best_state = {k: v.cpu().clone() for k, v in model.state_dict().items()}

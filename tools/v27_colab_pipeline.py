@@ -77,7 +77,7 @@ def main():
         f'python3 "{REPO_DIR}/tools/train_rec_v27.py" '
         f'--base_onnx "{REPO_DIR}/models/onnx/plate_rec_finetune.onnx" '
         f'--real_dir "{real_dir}" --synth_dir "{synth_dir}" '
-        f'--out_onnx "{out_onnx}" --epochs 15 --batch_size 128 --lr 2e-4'
+        f'--out_onnx "{out_onnx}" --epochs 12 --batch_size 128 --lr 5e-5'
     )
     shutil.copy2(out_onnx, os.path.join(V27_DRIVE, "plate_rec_v27.onnx"))
 
@@ -113,7 +113,7 @@ def main():
     for npu in ("NPU1", "NPU2"):
         cfg_path = os.path.join(WORK_DIR, f"rec_{npu.lower()}.json")
         out_dir = os.path.join(WORK_DIR, f"out_{npu.lower()}")
-        out_ax = os.path.join(WORK_DIR, f"plate_rec_v27_{npu.lower()}.axmodel")
+        out_ax = os.path.join(out_dir, f"plate_rec_v27_{npu.lower()}.axmodel")
         cfg = {
             "model_type": "ONNX",
             "npu_mode": npu,
