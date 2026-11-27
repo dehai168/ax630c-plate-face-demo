@@ -1,5 +1,17 @@
 # Changelog
 
+## v2.7 (2026-11-27，C++ 语法解码/双层锁定/原图直通 + 31 省均衡 OCR 微调，AX630C 实板验收通过)
+- **Phase 1：C++ 解码、规则与原图直通优化**：
+  - **CTC Prefix Beam 语法先验**（`src/plate_rec.cpp` / `src/plate_rec.h`）：`prefix_top_k` 提至 6；在保留的 24 条 beam 终选阶段引入首字符合法性、7/8 位长度先验、禁止双省份汉字、以及 8 位大型新能源（第 3 位为数字）末位动力字母（`D/F` 等）约束，彻底消除 `D→0` 及其连带颜色误判。
+  - **双层方牌锁定与特种警牌规则**：`dual_hyp` 对 `det_layer == 1` 且 `rect_ar < 2.4`、双层结果已合法的车牌不再误翻回单层；`approved_special_format.inc` 与 `check_format` 放行 `蒙08888警` 类第 2 位为数字的警牌。
+  - **原分辨率直通批测入口**（`src/main.cpp` `--image_list` / `--out_dir`）：支持原图分辨率直接推理与 ROI 放大，消除 4MP/4K 离线缩至 720p 导致的小车牌漏检。
+- **Phase 2：31 省均衡 OCR 模型微调与 Pulsar2 8.0 U16 量化**：
+  - 基于 `plate_rec_finetune.onnx`（`onnx2torch` 差分学习率微调 + 真实标注集 `京` 限流 + `tools/gen_synth_plates_v27.py` 6,200 张 31 省均衡合成车牌），在真实 `val/holdout` 上整体整牌率从 `90.82%` 提升至 `91.68%`、非京省份从 `89.20%` 提升至 `90.24%`。
+  - Pulsar2 8.0（`target_hardware=AX620E`，整网 `U16` 激活，`compiler.check=1` PASS）编译出 `plate_rec_npu1.axmodel`（SHA256 `79b5eeac…`）与 `plate_rec_npu2.axmodel`（SHA256 `f38eaf9b…`）。
+- **AX630C 实板验收（2026-11-27，`/opt/demo_v27_rc`，生产 `/opt/demo_v24` 未改动）**：
+  - 171 张人工标注测试集全量实测（对比 `v2.6`）：检出率 **`93.57% → 98.83%`**（169/171）、OCR 整牌率 **`78.36% → 91.81%`**（+13.45%，检出内 **92.90%**）、颜色准确率 **`89.47% → 97.66%`**（检出内 **98.82%**）、三项全对 **`77.78% → 90.64%`**（+12.86%），纯省份错从 18 例降至 3 例。
+  - 视频模式（`test_video.mp4` 60 帧冒烟）：`VID_RC=0`，平均算法 FPS **`10.81`**。
+
 ## v2.6 (2026-11-24，五类颜色 `ColorV3-ReLU6` 默认上线 + C++ Prefix Beam 解码，AX630C 实板验收通过)
 - **五类颜色 `ColorV3-ReLU6` 默认上线（`plate_color5_npu1.axmodel` / `npu2.axmodel`）**：
   - 全新轻量 5 层 CNN（全网 `ReLU6` 封顶 `[0, 6]`，彻底消除激活离群值），统一训练与 C++ 线上预处理为 `raw_rectified -> 96×96`（永久闭合 C-IF-004 双层拼接分歧）。
