@@ -103,6 +103,37 @@ def collate_fn(batch):
     return xs, targets, lens, list(txts)
 
 
+def make_dynamic_batch_onnx(src_onnx, dst_onnx):
+    m = onnx.load(src_onnx)
+    # Set batch dim of inputs/outputs to dynamic "N"
+    for inp in m.graph.input:
+        if inp.type.tensor_type.shape.dim:
+            inp.type.tensor_type.shape.dim[0].dim_param = "N"
+    for out in m.graph.output:
+        if out.type.tensor_type.shape.dim:
+            out.type.tensor_type.shape.dim[0].dim_param = "N"
+    # Find shape inputs of Reshape nodes and replace leading 1 with -1
+    reshape_shape_names = {n.input[1] for n in m.graph.node if n.op_type == "Reshape" and len(n.input) >= 2}
+    for init in m.graph.initializer:
+        if init.name in reshape_shape_names and init.data_type == onnx.TensorProto.INT64:
+            arr = onnx.numpy_helper.to_array(init).copy()
+            if arr.ndim == 1 and len(arr) >= 2 and arr[0] == 1:
+                arr[0] = -1
+                init.CopyFrom(onnx.numpy_helper.from_array(arr, init.name))
+    for n in m.graph.node:
+        if n.op_type == "Constant" and n.output[0] in reshape_shape_names:
+            for attr in n.attribute:
+                if attr.name == "value" and attr.t.data_type == onnx.TensorProto.INT64:
+                    arr = onnx.numpy_helper.to_array(attr.t).copy()
+                    if arr.ndim == 1 and len(arr) >= 2 and arr[0] == 1:
+                        arr[0] = -1
+                        attr.t.CopyFrom(onnx.numpy_helper.from_array(arr, attr.t.name))
+    onnx.save(m, dst_onnx)
+    sess = ort.InferenceSession(dst_onnx, providers=["CPUExecutionProvider"])
+    y = sess.run(None, {"data": np.zeros((4, 3, 48, 160), dtype=np.float32)})[0]
+    print("Dynamic-batch ONNX verified! batch=4 out shape:", y.shape, flush=True)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--base_onnx", required=True)
@@ -168,7 +199,9 @@ def main():
     tr_dl = DataLoader(tr_ds, batch_size=args.batch_size, sampler=sampler, collate_fn=collate_fn, num_workers=2)
     va_dl = DataLoader(va_ds, batch_size=args.batch_size, shuffle=False, collate_fn=collate_fn, num_workers=2)
 
-    model = convert(args.base_onnx).to(device)
+    dyn_onnx = os.path.join(os.path.dirname(args.out_onnx), "_dyn_base.onnx")
+    make_dynamic_batch_onnx(args.base_onnx, dyn_onnx)
+    model = convert(dyn_onnx).to(device)
     # Check output shape on dummy
     with torch.no_grad():
         dummy = torch.zeros(1, 3, 48, 160, device=device)
