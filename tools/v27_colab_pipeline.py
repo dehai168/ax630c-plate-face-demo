@@ -71,15 +71,18 @@ def main():
         syn_tar = find_file("v27_synth.tar")
         run(f'tar -xf "{syn_tar}" -C "{synth_dir}"')
 
-    # 2. Train plate_rec_v27.onnx
+    # 2. Train plate_rec_v27.onnx (or reuse if SKIP_TRAIN=1)
     out_onnx = os.path.join(WORK_DIR, "plate_rec_v27.onnx")
-    run(
-        f'python3 "{REPO_DIR}/tools/train_rec_v27.py" '
-        f'--base_onnx "{REPO_DIR}/models/onnx/plate_rec_finetune.onnx" '
-        f'--real_dir "{real_dir}" --synth_dir "{synth_dir}" '
-        f'--out_onnx "{out_onnx}" --epochs 12 --batch_size 128 --lr 5e-5'
-    )
-    shutil.copy2(out_onnx, os.path.join(V27_DRIVE, "plate_rec_v27.onnx"))
+    if os.environ.get("SKIP_TRAIN", "0") == "1" and os.path.exists(out_onnx):
+        print("Reusing existing", out_onnx, flush=True)
+    else:
+        run(
+            f'python3 "{REPO_DIR}/tools/train_rec_v27.py" '
+            f'--base_onnx "{REPO_DIR}/models/onnx/plate_rec_finetune.onnx" '
+            f'--real_dir "{real_dir}" --synth_dir "{synth_dir}" '
+            f'--out_onnx "{out_onnx}" --epochs 12 --batch_size 128 --lr 5e-5'
+        )
+        shutil.copy2(out_onnx, os.path.join(V27_DRIVE, "plate_rec_v27.onnx"))
 
     # 3. Prepare 64-image calibration tar (160x48 BGR) for Pulsar2 8.0
     calib_tar = os.path.join(WORK_DIR, "rec_calib64.tar")
@@ -116,6 +119,7 @@ def main():
         out_ax = os.path.join(out_dir, f"plate_rec_v27_{npu.lower()}.axmodel")
         cfg = {
             "model_type": "ONNX",
+            "target_hardware": "AX620E",
             "npu_mode": npu,
             "quant": {
                 "input_configs": [{
