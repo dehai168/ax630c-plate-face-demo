@@ -159,7 +159,7 @@ def main():
     ap.add_argument("--epochs", type=int, default=15)
     ap.add_argument("--batch_size", type=int, default=128)
     ap.add_argument("--lr", type=float, default=2e-4)
-    ap.add_argument("--max_jing_real", type=int, default=450)
+    ap.add_argument("--max_jing_real", type=int, default=800)
     args = ap.parse_args()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
