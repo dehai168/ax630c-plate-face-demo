@@ -112,21 +112,24 @@ def make_dynamic_batch_onnx(src_onnx, dst_onnx):
     for out in m.graph.output:
         if out.type.tensor_type.shape.dim:
             out.type.tensor_type.shape.dim[0].dim_param = "N"
-    # Find shape inputs of Reshape nodes and replace leading 1 with -1
+    # Find shape inputs of Reshape nodes and replace leading 1 with -1 (if no -1) or 0 (copy input dim0)
     reshape_shape_names = {n.input[1] for n in m.graph.node if n.op_type == "Reshape" and len(n.input) >= 2}
+    def patch_arr(arr):
+        if arr.ndim == 1 and len(arr) >= 2 and arr[0] == 1:
+            arr[0] = 0 if (-1 in arr) else -1
+            return True
+        return False
     for init in m.graph.initializer:
         if init.name in reshape_shape_names and init.data_type == onnx.TensorProto.INT64:
             arr = onnx.numpy_helper.to_array(init).copy()
-            if arr.ndim == 1 and len(arr) >= 2 and arr[0] == 1:
-                arr[0] = -1
+            if patch_arr(arr):
                 init.CopyFrom(onnx.numpy_helper.from_array(arr, init.name))
     for n in m.graph.node:
         if n.op_type == "Constant" and n.output[0] in reshape_shape_names:
             for attr in n.attribute:
                 if attr.name == "value" and attr.t.data_type == onnx.TensorProto.INT64:
                     arr = onnx.numpy_helper.to_array(attr.t).copy()
-                    if arr.ndim == 1 and len(arr) >= 2 and arr[0] == 1:
-                        arr[0] = -1
+                    if patch_arr(arr):
                         attr.t.CopyFrom(onnx.numpy_helper.from_array(arr, attr.t.name))
     onnx.save(m, dst_onnx)
     sess = ort.InferenceSession(dst_onnx, providers=["CPUExecutionProvider"])
